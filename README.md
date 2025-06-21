@@ -25,7 +25,13 @@ Visit `/docs` for interactive API documentation (Swagger UI) or `/redoc` for ReD
 
 ## 📊 Required Data Files
 
-You'll need to upload 7 CSV or Excel files containing your fleet data. 
+You'll need to upload 7 CSV or Excel files containing your fleet data.
+
+If you prefer a single workbook, include sheets named:
+"Hours Of Service Violation Report", "Personnel Conveyance Report",
+"Unassigned Hours of Service Report", "Safety Inbox Report",
+"MistDVI Report", "Driver Safety Behaviors Report", and
+"Drivers Safety Report".
 
 ### File Format Support
 - **CSV files**: Single table per file
@@ -42,16 +48,16 @@ If your data is in a single Excel file with multiple sheets:
 
 ### Sheet Naming Conventions
 The system will auto-detect sheets with these common names:
-- Fleet/Safety Scores → `fleet_scores`
-- HOS/Violations → `hos_violations`
-- Safety/Events/Incidents → `safety_events`
-- Unassigned Driving → `unassigned_driving`
-- Speeding/Speed Events → `speeding_events`
-- PC/Personal Conveyance → `personal_conveyance`
-- DVIR/Inspections → `missed_dvirs`
+ - Hours Of Service Violation Report
+ - Personnel Conveyance Report
+ - Unassigned Hours of Service Report
+ - Safety Inbox Report
+ - MistDVI Report
+ - Driver Safety Behaviors Report
+ - Drivers Safety Report
 
-### 1. Fleet Scores (`fleet_scores.csv`)
-Regional safety scores for your fleet divisions.
+### 1. Hours Of Service Violation Report
+Details violations of hours of service rules.
 ```csv
 Region,Score,Previous_Score
 Corporate,91,97
@@ -65,8 +71,8 @@ Southeast,93,96
 - Include the same columns as above
 - The system will auto-detect this sheet
 
-### 2. HOS Violations (`hos_violations.csv`)
-Hours of Service violations by type and region.
+### 2. Personnel Conveyance Report
+Summarizes authorized personal conveyance use.
 ```csv
 Region,Missing_Cert,Shift_Duty,Shift_Driving,Cycle_Limit,Rest_Break
 GL,75,20,3,0,10
@@ -74,8 +80,8 @@ OV,30,15,2,0,3
 SE,77,29,2,0,0
 ```
 
-### 3. Safety Events (`safety_events.csv`)
-Safety incidents categorized by type and region.
+### 3. Unassigned Hours of Service Report
+Lists unassigned HOS events that require review.
 ```csv
 Region,Following_Distance,Harsh_Turn,Harsh_Brake,Defensive_Driving,Dismissed
 Corporate,5,0,0,0,5
@@ -83,16 +89,16 @@ GL,4,0,0,0,4
 SE,3,0,1,0,4
 ```
 
-### 4. Unassigned Driving (`unassigned_driving.csv`)
-Vehicle segments not assigned to specific drivers.
+### 4. Safety Inbox Report
+Records safety-related messages and notifications.
 ```csv
 Vehicle_ID,Driver_Name,Segments,Duration
 ST-B1665,Logan Eaves,25,86:00:32
 MV-18270,Richard Rivera,2,10:21:15
 ```
 
-### 5. Speeding Events (`speeding_events.csv`)
-Speeding incidents by severity level.
+### 5. MistDVI Report
+Tracks missed DVIR submissions.
 ```csv
 Region,Driver_Name,Light,Moderate,Heavy,Severe
 GL,Various,10,1,0,5
@@ -100,8 +106,8 @@ OV,Various,8,0,0,3
 SE,Various,9,2,0,8
 ```
 
-### 6. Personal Conveyance (`personal_conveyance.csv`)
-Personal conveyance usage by driver.
+### 6. Driver Safety Behaviors Report
+Analyzes driver behavior metrics.
 ```csv
 Driver_Name,PC_Duration,Days_Over_2hrs
 Johnny Halderman,27:01:13,3
@@ -109,8 +115,8 @@ Roberto Garcia,18:42:27,2
 Adam Watson,12:59:31,1
 ```
 
-### 7. Missed DVIRs (`missed_dvirs.csv`)
-Missed pre/post trip inspections by driver.
+### 7. Drivers Safety Report
+Overall safety scorecards for each driver.
 ```csv
 Driver_Name,Post_Trip,Pre_Trip
 Adam Watson,7,7
