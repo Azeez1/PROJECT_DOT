@@ -5,14 +5,14 @@ You are building a FastAPI web application that generates DOT Fleet Compliance r
 
 ## Core Requirements
 
-### Input: 7 Data Files
-1. **fleet_scores.csv** - Regional safety scores
-2. **hos_violations.csv** - Hours of Service violations
-3. **safety_events.csv** - Safety incidents by type
-4. **unassigned_driving.csv** - Unassigned vehicle segments
-5. **speeding_events.csv** - Speeding by severity
-6. **personal_conveyance.csv** - PC usage by driver
-7. **missed_dvirs.csv** - Missed inspections
+### Input: 7 Report Sheets
+1. **Hours Of Service Violation Report**
+2. **Personnel Conveyance Report**
+3. **Unassigned Hours of Service Report**
+4. **Safety Inbox Report**
+5. **MistDVI Report**
+6. **Driver Safety Behaviors Report**
+7. **Drivers Safety Report**
 
 ### Output: 6-7 Page PDF Report
 - **Page 1**: Visual dashboard with 6 charts
@@ -45,13 +45,13 @@ compliance-snapshot/
 │   │   ├── processors/           # Each CSV/XLSX handler
 │   │   │   ├── __init__.py
 │   │   │   ├── file_handler.py  # Multi-sheet & large file handling
-│   │   │   ├── fleet_scores.py
-│   │   │   ├── hos_violations.py
-│   │   │   ├── safety_events.py
-│   │   │   ├── unassigned_driving.py
-│   │   │   ├── speeding_events.py
-│   │   │   ├── personal_conveyance.py
-│   │   │   └── missed_dvirs.py
+│   │   │   ├── hos_violation.py
+│   │   │   ├── personnel_conveyance.py
+│   │   │   ├── unassigned_hos.py
+│   │   │   ├── safety_inbox.py
+│   │   │   ├── mistdvi.py
+│   │   │   ├── driver_behaviors.py
+│   │   │   └── drivers_safety.py
 │   │   ├── visualizations/
 │   │   │   ├── __init__.py
 │   │   │   ├── charts.py        # All chart generation
@@ -126,13 +126,13 @@ def process_large_excel(file_path):
 ```python
 # Expected sheet patterns
 SHEET_MAPPINGS = {
-    'fleet_scores': ['Safety Scores', 'Fleet Score', 'Scores'],
-    'hos_violations': ['HOS', 'Violations', 'Hours of Service'],
-    'safety_events': ['Safety', 'Events', 'Incidents'],
-    'unassigned': ['Unassigned', 'Unassigned Driving'],
-    'speeding': ['Speeding', 'Speed Events'],
-    'personal_conveyance': ['PC', 'Personal Conveyance'],
-    'dvirs': ['DVIR', 'Inspections', 'Missed DVIR']
+    'hos_violation': ['Hours Of Service Violation Report', 'HOS Violations'],
+    'personnel_conveyance': ['Personnel Conveyance Report'],
+    'unassigned_hos': ['Unassigned Hours of Service Report'],
+    'safety_inbox': ['Safety Inbox Report'],
+    'mistdvi': ['MistDVI Report', 'Missed DVIR'],
+    'driver_behaviors': ['Driver Safety Behaviors Report'],
+    'drivers_safety': ['Drivers Safety Report']
 }
 ```
 
@@ -233,37 +233,37 @@ async def generate_all_charts(data: Dict[str, pd.DataFrame], output_dir: Path) -
     
     # Fleet Score Gauge
     chart_paths['fleet_score'] = await charts.create_fleet_gauge(
-        data['fleet_scores'], 
+        data['drivers_safety'],
         output_dir / 'fleet_score.png'
     )
     
     # HOS Violations Stacked Bar
-    chart_paths['hos_violations'] = await charts.create_hos_stacked_bar(
-        data['hos_violations'],
-        output_dir / 'hos_violations.png'
+    chart_paths['hos_violation'] = await charts.create_hos_stacked_bar(
+        data['hos_violation'],
+        output_dir / 'hos_violation.png'
     )
     
     # 4-Week Trend Line
     chart_paths['trend'] = await charts.create_trend_chart(
-        data['hos_violations'],
+        data['hos_violation'],
         output_dir / 'trend.png'
     )
     
     # Safety Events Bar
-    chart_paths['safety_events'] = await charts.create_safety_events_bar(
-        data['safety_events'],
+    chart_paths['driver_behaviors'] = await charts.create_safety_events_bar(
+        data['driver_behaviors'],
         output_dir / 'safety_events.png'
     )
     
     # Unassigned Driving
-    chart_paths['unassigned'] = await charts.create_unassigned_chart(
-        data['unassigned_driving'],
+    chart_paths['unassigned_hos'] = await charts.create_unassigned_chart(
+        data['unassigned_hos'],
         output_dir / 'unassigned.png'
     )
     
     # Speeding Pie Chart
-    chart_paths['speeding'] = await charts.create_speeding_pie(
-        data['speeding_events'],
+    chart_paths['mistdvi'] = await charts.create_speeding_pie(
+        data['mistdvi'],
         output_dir / 'speeding.png'
     )
     
@@ -378,13 +378,13 @@ def detect_data_type(sheet_name: str) -> str:
     sheet_lower = sheet_name.lower()
     
     mappings = {
-        'fleet_scores': ['safety score', 'fleet score', 'scores'],
-        'hos_violations': ['hos', 'violations', 'hours of service'],
-        'safety_events': ['safety', 'events', 'incidents'],
-        'unassigned_driving': ['unassigned', 'unassigned driving'],
-        'speeding_events': ['speeding', 'speed events'],
-        'personal_conveyance': ['pc', 'personal conveyance'],
-        'missed_dvirs': ['dvir', 'inspections', 'missed dvir']
+        'hos_violation': ['hos violation', 'hours of service violation'],
+        'personnel_conveyance': ['personnel conveyance'],
+        'unassigned_hos': ['unassigned hos', 'unassigned hours'],
+        'safety_inbox': ['safety inbox'],
+        'mistdvi': ['mistdvi', 'missed dvir'],
+        'driver_behaviors': ['driver safety behaviors'],
+        'drivers_safety': ['drivers safety']
     }
     
     for data_type, patterns in mappings.items():
