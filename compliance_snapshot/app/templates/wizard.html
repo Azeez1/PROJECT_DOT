@@ -61,15 +61,15 @@ async function openTab(table){
 
   // build HTML table
   const area = document.getElementById('table-area');
-  area.innerHTML = `<table id="tbl"><thead><tr>$${'{'}
-      columns.map(c=>`<th>${'$'}{c}</th>`).join('')
+  area.innerHTML = `<table id="tbl"><thead><tr>${
+      columns.map(c=>`<th>${c}</th>`).join('')
     }</tr></thead><tbody></tbody></table>
     <label style="display:block;margin:.5rem 0">
-      <input type="checkbox" name="chart_${'$'}{table}" checked> include chart
+      <input type="checkbox" name="chart_${table}" checked> include chart
     </label>`;
   const tbody = area.querySelector('tbody');
   rows.forEach(r=>{
-    tbody.insertRow().innerHTML = r.map(v=>`<td>${'$'}{v}</td>`).join('');
+    tbody.insertRow().innerHTML = r.map(v=>`<td>${v}</td>`).join('');
   });
   $('#tbl').DataTable();
 
