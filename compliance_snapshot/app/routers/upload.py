@@ -6,6 +6,7 @@ import uuid
 
 from ..core.utils import save_uploads
 from ..services.pdf_maker import build_placeholder_pdf  # stub for now
+from app.services.processors.hos_violations import summarize
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -25,6 +26,17 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
     folder.mkdir(parents=True, exist_ok=True)
 
     await save_uploads(folder, files)
+
+    # >>> BEGIN PATCH
+    # Collect any file path to test (pick the first uploaded file)
+    sample_upload_path = folder / files[0].filename
+    try:
+        hos_debug = summarize(sample_upload_path)
+        print("HOS DEBUG:", hos_debug)
+    except Exception as e:
+        # Ignore if the first file isn't a HOS sheet; just print the reason.
+        print("HOS DEBUG error:", e)
+    # >>> END PATCH
 
     output_pdf = folder / "snapshot.pdf"
     background_tasks.add_task(build_placeholder_pdf, output_pdf)
