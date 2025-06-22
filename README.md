@@ -268,3 +268,6 @@ Copyright © 2025 [Your Company Name]. All rights reserved.
 ---
 
 Built with ❤️ for transportation compliance teams.
+
+# Compliance Snapshot MVP
+Run `pip install -r requirements.txt` and `uvicorn app.main:app --reload`.
