@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliance Snapshot – Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 2rem; }
+        .box { border: 1px dashed #999; padding: 2rem; max-width: 600px; margin: auto; }
+        input[type="file"] { display: block; margin-bottom: 1rem; }
+        button { padding: 0.5rem 1rem; }
+    </style>
+</head>
+<body>
+    <h2>Upload Fleet Reports</h2>
+    <div class="box">
+        <form action="/generate" method="post" enctype="multipart/form-data">
+            <p><strong>Option 1:</strong> Upload one Excel workbook with up‑to‑seven sheets</p>
+            <input type="file" name="files" accept=".xlsx,.xls" />
+            <hr>
+            <p><strong>Option 2:</strong> Upload individual CSV/XLSX for each report</p>
+            <input type="file" name="files" accept=".csv,.xlsx" multiple />
+            <br>
+            <button type="submit">Generate Snapshot</button>
+        </form>
+    </div>
+</body>
+</html>

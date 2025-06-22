@@ -35,7 +35,7 @@ You are building a FastAPI web application that generates DOT Fleet Compliance r
 ```
 README.md
 requirements.txt
-compliance-snapshot/
+compliance_snapshot/
 ├── app/                          # All runtime code
 │   ├── __init__.py
 │   ├── main.py                   # FastAPI entrypoint
