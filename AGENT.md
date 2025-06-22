@@ -33,6 +33,8 @@ You are building a FastAPI web application that generates DOT Fleet Compliance r
 
 ### 1. File Structure (Exact Layout)
 ```
+README.md
+requirements.txt
 compliance-snapshot/
 ├── app/                          # All runtime code
 │   ├── __init__.py
@@ -72,10 +74,6 @@ compliance-snapshot/
 │   ├── test_processors.py
 │   ├── test_charts.py
 │   └── test_api.py
-├── requirements.txt
-├── .replit                      # Replit configuration
-├── replit.nix                   # Replit dependencies
-└── README.md
 ```
 
 ### Dependencies (requirements.txt)
