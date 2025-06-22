@@ -1,8 +1,17 @@
 modules = ["python-3.12", "web"]
-run = "uvicorn compliance_snapshot.app.main:app --host 0.0.0.0 --port 3000"
+run = "uvicorn compliance_snapshot.app.main:app --host 0.0.0.0 --port 8000"
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "uvicorn compliance_snapshot.app.main:app --host 0.0.0.0 --port 3000"]
+run = [
+  "sh",
+  "-c",
+  "uvicorn compliance_snapshot.app.main:app --host 0.0.0.0 --port 8000",
+]
+
+[[ports]]
+localPort = 8000
+externalPort = 80
+exposeLocalhost = true
