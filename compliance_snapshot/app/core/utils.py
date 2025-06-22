@@ -1,3 +1,4 @@
+ codex/create-upload-form-and-routes
 from pathlib import Path
 from fastapi import UploadFile
 
@@ -13,3 +14,6 @@ async def save_uploads(folder: Path, files: list[UploadFile]):
                     break
                 out_file.write(chunk)
         await uploaded.close()
+=======
+# Utility functions
+>>>>>> main
