@@ -65,10 +65,8 @@ compliance-snapshot/
 │   │   └── utils.py             # Chunk reader, validators
 │   └── templates/               # Jinja2 HTML templates
 │       └── upload.html          # Drag-and-drop upload interface
-├── static/                      # Logo, sample data, CSS
-│   ├── style.css
-│   ├── placeholder_logo.png
-│   └── sample_bg.jpg
+├── static/                      # Optional assets (CSS, images)
+│   └── style.css
 ├── tests/
 │   ├── __init__.py
 │   ├── test_processors.py
