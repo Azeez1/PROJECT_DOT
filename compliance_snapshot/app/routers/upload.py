@@ -28,14 +28,16 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
     sample_path = next((folder / Path(f.filename).name for f in files if f.filename), None)
     if sample_path and sample_path.is_file():
-        # write HOS table as demo
-        df = (
-            pd.read_csv(sample_path)
-            if sample_path.suffix.lower() == ".csv"
-            else pd.read_excel(sample_path, engine="openpyxl")
-        )
-        db = sqlite3.connect(folder / "snapshot.db")
-        df.to_sql("hos", db, if_exists="replace", index=False)
+        try:
+            if sample_path.suffix.lower() == ".csv":
+                df = pd.read_csv(sample_path)
+            else:
+                df = pd.read_excel(sample_path, engine="openpyxl")
+            db = sqlite3.connect(folder / "snapshot.db")
+            df.to_sql("hos", db, if_exists="replace", index=False)
+            db.close()
+        except Exception as e:
+            print("SQLite write error:", e)
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/wizard/{ticket}", status_code=303)

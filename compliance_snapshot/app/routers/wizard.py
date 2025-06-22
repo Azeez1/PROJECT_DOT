@@ -27,3 +27,8 @@ async def query_table(ticket: str, table: str):
     cols = [c[1] for c in con.execute(f'PRAGMA table_info("{table}")')]
     rows = con.execute(f'SELECT * FROM "{table}" LIMIT 200').fetchall()
     return JSONResponse({"columns": cols, "rows": rows})
+
+
+@router.post("/finalize/{ticket}")
+async def finalize(ticket: str):
+    return {"status": "OK – PDF build wiring comes next"}
