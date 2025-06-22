@@ -6,7 +6,10 @@ import uuid
 
 from ..core.utils import save_uploads
 from ..services.pdf_maker import build_placeholder_pdf  # stub for now
-from app.services.processors.hos_violations import summarize
+# Import the processor using a package-relative path so uvicorn can
+# resolve the module correctly when the project is executed as
+# ``compliance_snapshot.app``.
+from ..services.processors.hos_violations import summarize
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
