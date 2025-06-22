@@ -32,13 +32,16 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
     # >>> BEGIN PATCH
     # Collect any file path to test (pick the first uploaded file)
-    sample_upload_path = folder / files[0].filename
-    try:
-        hos_debug = summarize(sample_upload_path)
-        print("HOS DEBUG:", hos_debug)
-    except Exception as e:
-        # Ignore if the first file isn't a HOS sheet; just print the reason.
-        print("HOS DEBUG error:", e)
+    sample_upload_path = next(
+        (folder / Path(f.filename).name for f in files if f.filename), None
+    )
+    if sample_upload_path and sample_upload_path.is_file():
+        try:
+            hos_debug = summarize(sample_upload_path)
+            print("HOS DEBUG:", hos_debug)
+        except Exception as e:
+            # Ignore if the file isn't a HOS sheet; just print the reason.
+            print("HOS DEBUG error:", e)
     # >>> END PATCH
 
     output_pdf = folder / "snapshot.pdf"
