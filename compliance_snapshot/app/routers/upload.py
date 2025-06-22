@@ -1,4 +1,3 @@
- codex/create-upload-form-and-routes
 from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -38,13 +37,4 @@ async def download(ticket: str):
     if not pdf_path.exists():
         return JSONResponse({"status": "processing"})
     return FileResponse(pdf_path, filename="ComplianceSnapshot.pdf")
-=======
-from fastapi import APIRouter
 
-router = APIRouter()
-
-@router.get("/", tags=["health"])
-async def root():
-    """Return a simple JSON to confirm the app is running."""
-    return {"status": "alive"}
->>>>>> main
