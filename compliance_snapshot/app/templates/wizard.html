@@ -1,0 +1,90 @@
+<!DOCTYPE html><html><head>
+  <meta charset="utf-8" />
+  <title>Snapshot Wizard</title>
+
+  <!-- libs -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:2rem}
+    nav button{margin-right:.5rem;margin-bottom:1rem}
+    #preview{width:540px;height:300px;margin-top:1rem;border:1px solid #ccc}
+    #tbl{width:100%}
+  </style>
+</head><body>
+  <h2>Compliance Snapshot – Wizard</h2>
+
+  <!-- Tabs will be built by JS -->
+  <nav id="tabs"></nav>
+
+  <!-- DataTable injected here -->
+  <div id="table-area"></div>
+
+  <!-- Chart preview -->
+  <canvas id="preview" class="hidden"></canvas>
+
+  <!-- Finalize form -->
+  <form id="finalize"
+        hx-post="/finalize/{{ ticket }}"
+        hx-include="[name^='chart_']"
+        hx-target="body" hx-swap="innerHTML">
+    <button type="submit">Build PDF</button>
+  </form>
+
+<script>
+const ticket = "{{ ticket }}";
+
+// ---------- build tab buttons ----------
+async function loadTabs(){
+  const res = await fetch(`/api/${ticket}/tables`);
+  const tables = await res.json();
+  const nav = document.getElementById('tabs');
+  tables.forEach(name=>{
+    const btn = document.createElement('button');
+    btn.type = "button";
+    btn.textContent = name.toUpperCase();
+    btn.onclick = ()=> openTab(name);
+    nav.appendChild(btn);
+  });
+}
+loadTabs();
+
+// ---------- open tab, render table & chart ----------
+async function openTab(table){
+  const res = await fetch(`/api/${ticket}/query?table=${table}`);
+  const {columns, rows} = await res.json();
+
+  // build HTML table
+  const area = document.getElementById('table-area');
+  area.innerHTML = `<table id="tbl"><thead><tr>$${'{'}
+      columns.map(c=>`<th>${'$'}{c}</th>`).join('')
+    }</tr></thead><tbody></tbody></table>
+    <label style="display:block;margin:.5rem 0">
+      <input type="checkbox" name="chart_${'$'}{table}" checked> include chart
+    </label>`;
+  const tbody = area.querySelector('tbody');
+  rows.forEach(r=>{
+    tbody.insertRow().innerHTML = r.map(v=>`<td>${'$'}{v}</td>`).join('');
+  });
+  $('#tbl').DataTable();
+
+  // quick bar chart by violation_type (if column exists)
+  const idx = columns.map(c=>c.toLowerCase()).indexOf('violation_type');
+  if(idx === -1){ document.getElementById('preview').classList.add('hidden'); return; }
+
+  const counts = {};
+  rows.forEach(r=> counts[r[idx]] = (counts[r[idx]]||0)+1);
+  const ctx = document.getElementById('preview').getContext('2d');
+  document.getElementById('preview').classList.remove('hidden');
+  new Chart(ctx,{type:'bar',
+    data:{labels:Object.keys(counts),
+          datasets:[{label:'count',data:Object.values(counts)}]},
+    options:{plugins:{title:{display:true,text:table}}}});
+}
+</script>
+</body></html>

@@ -5,11 +5,7 @@ from pathlib import Path
 import uuid
 
 from ..core.utils import save_uploads
-from ..services.pdf_maker import build_placeholder_pdf  # stub for now
-# Import the processor using a package-relative path so uvicorn can
-# resolve the module correctly when the project is executed as
-# ``compliance_snapshot.app``.
-from ..services.processors.hos_violations import summarize
+import sqlite3, pandas as pd
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -30,24 +26,19 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
     await save_uploads(folder, files)
 
-    # >>> BEGIN PATCH
-    # Collect any file path to test (pick the first uploaded file)
-    sample_upload_path = next(
-        (folder / Path(f.filename).name for f in files if f.filename), None
-    )
-    if sample_upload_path and sample_upload_path.is_file():
-        try:
-            hos_debug = summarize(sample_upload_path)
-            print("HOS DEBUG:", hos_debug)
-        except Exception as e:
-            # Ignore if the file isn't a HOS sheet; just print the reason.
-            print("HOS DEBUG error:", e)
-    # >>> END PATCH
+    sample_path = next((folder / Path(f.filename).name for f in files if f.filename), None)
+    if sample_path and sample_path.is_file():
+        # write HOS table as demo
+        df = (
+            pd.read_csv(sample_path)
+            if sample_path.suffix.lower() == ".csv"
+            else pd.read_excel(sample_path, engine="openpyxl")
+        )
+        db = sqlite3.connect(folder / "snapshot.db")
+        df.to_sql("hos", db, if_exists="replace", index=False)
 
-    output_pdf = folder / "snapshot.pdf"
-    background_tasks.add_task(build_placeholder_pdf, output_pdf)
-
-    return JSONResponse({"ticket": ticket, "download_url": f"/download/{ticket}"})
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"/wizard/{ticket}", status_code=303)
 
 @router.get("/download/{ticket}", tags=["generate"])
 async def download(ticket: str):
