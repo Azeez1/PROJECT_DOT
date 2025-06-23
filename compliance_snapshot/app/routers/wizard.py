@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 import sqlite3
 from pathlib import Path
 import pandas as pd
-from ..services.visualizations.chart_factory import make_chart
+from ..services.visualizations.chart_factory import make_chart, make_trend_line
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -66,7 +66,10 @@ async def finalize(ticket: str,
     charts_dir.mkdir(exist_ok=True)
     chart_path = charts_dir / "hos_chart.png"
 
-    make_chart(df, chart_type, chart_path, title="Violations by Type")
+    if chart_type == "line":
+        make_trend_line(df, chart_path)
+    else:
+        make_chart(df, chart_type, chart_path, title="Violations by Type")
 
     pdf_path = Path(f"/tmp/{ticket}/ComplianceSnapshot.pdf")
     c = canvas.Canvas(str(pdf_path), pagesize=letter)
