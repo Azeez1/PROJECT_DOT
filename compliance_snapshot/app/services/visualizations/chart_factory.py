@@ -49,22 +49,25 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
 
 def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> None:
     """Create a stacked bar chart of violation counts per region."""
+
     plt.style.use("seaborn-v0_8-whitegrid")
     df = _drop_null_rows(df, ["Tags", "Violation Type"])
     pivot = (
         df.pivot_table(
-            index="Tags",
-            columns="Violation Type",
+            index="Tags",            # x-axis labels (e.g. GL, OV, SE)
+            columns="Violation Type", # stacked bars by violation type
             aggfunc="size",
             fill_value=0,
         )
         .sort_index(axis=1)
     )
-    ax = pivot.plot.bar(stacked=True, figsize=(7, 4))
+
+    ax = pivot.plot.bar(stacked=True, figsize=(6, 3))
+    plt.xticks(rotation=0)  # keep region labels horizontal
     ax.set_xlabel("")
     ax.set_ylabel("Count")
     plt.tight_layout()
-    plt.savefig(out_path, dpi=200)
+    plt.savefig(out_path, dpi=160)
     plt.close()
 
 

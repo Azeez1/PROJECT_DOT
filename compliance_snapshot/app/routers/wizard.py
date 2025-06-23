@@ -161,9 +161,16 @@ async def finalize(ticket: str,
 
     c.setFont("Helvetica-Bold", 14)
     c.drawString(40, 750, "HOS Violations Summary")
-    c.setFont("Helvetica", 10)
     text = c.beginText(40, 730)
     for line in narrative.split("\n"):
+        if line.strip() in {
+            "\u2022 Violations by Region:",
+            "\u2022 HOS Violations Week-over-Week Comparison:",
+            "\u2022 Top Violation Types:",
+        }:
+            text.setFont("Helvetica-Bold", 10)
+        else:
+            text.setFont("Helvetica", 10)
         text.textLine(line)
     c.drawText(text)
     c.showPage()
