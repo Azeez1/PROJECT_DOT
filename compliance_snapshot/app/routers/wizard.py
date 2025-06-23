@@ -26,10 +26,20 @@ async def list_tables(ticket: str):
     return [r[0] for r in cur.fetchall()]
 
 @router.get("/api/{ticket}/query")
-async def query_table(ticket: str, table: str):
+async def query_table(ticket: str, table: str, limit: int | None = None):
+    """Return rows from the requested table.
+
+    Args:
+        ticket: Upload ticket identifier.
+        table: Table name within the SQLite DB.
+        limit: Optional row limit. If ``None`` all rows are returned.
+    """
     con = sqlite3.connect(_db(ticket))
     cols = [c[1] for c in con.execute(f'PRAGMA table_info("{table}")')]
-    rows = con.execute(f'SELECT * FROM "{table}" LIMIT 200').fetchall()
+    query = f'SELECT * FROM "{table}"'
+    if limit is not None:
+        query += f' LIMIT {int(limit)}'
+    rows = con.execute(query).fetchall()
     return JSONResponse({"columns": cols, "rows": rows})
 
 
