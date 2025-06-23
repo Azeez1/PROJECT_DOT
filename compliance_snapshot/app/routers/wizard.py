@@ -60,7 +60,12 @@ async def finalize(ticket: str,
     charts_dir = Path(f"/tmp/{ticket}/charts"); charts_dir.mkdir(exist_ok=True)
     chart_path = charts_dir / "hos.png"
     if chart_hos == "on":
-        make_chart(df, chart_type, chart_path)
+        make_chart(
+            df,
+            chart_type,
+            chart_path,
+            title="HOS Violations by Type",
+        )
 
     # 3) build simple PDF
     pdf_path = Path(f"/tmp/{ticket}/ComplianceSnapshot.pdf")
