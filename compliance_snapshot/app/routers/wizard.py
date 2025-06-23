@@ -5,10 +5,7 @@ from fastapi.templating import Jinja2Templates
 import sqlite3
 from pathlib import Path
 import pandas as pd
-from ..services.visualizations.chart_factory import (
-    make_stacked_bar,
-    make_trend_line,
-)
+from ..services.visualizations.chart_factory import make_chart
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -50,8 +47,7 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
 @router.post("/finalize/{ticket}")
 async def finalize(ticket: str,
                    chart_hos: str = Form("on"),
-                   chart_type: str = Form("bar"),
-                   trend_end: str | None = Form(None)):
+                   chart_type: str = Form("bar")):
     db_file = _db(ticket)
     if not db_file.exists():
         raise HTTPException(404, "ticket not found")
@@ -65,17 +61,12 @@ async def finalize(ticket: str,
         raise HTTPException(500, "week column not found")
 
     df["week"] = pd.to_datetime(df[week_col])
-    end_dt = pd.to_datetime(trend_end) if trend_end else df["week"].max()
-    start_dt = end_dt - pd.Timedelta(weeks=3)
-    window_df = df[(df["week"] >= start_dt) & (df["week"] <= end_dt)]
 
     charts_dir = Path(f"/tmp/{ticket}/charts")
     charts_dir.mkdir(exist_ok=True)
-    stacked_path = charts_dir / "hos_stacked.png"
-    trend_path = charts_dir / "hos_trend.png"
+    chart_path = charts_dir / "hos_chart.png"
 
-    make_stacked_bar(df, stacked_path)
-    make_trend_line(window_df, trend_path)
+    make_chart(df, chart_type, chart_path, title="Violations by Type")
 
     pdf_path = Path(f"/tmp/{ticket}/ComplianceSnapshot.pdf")
     c = canvas.Canvas(str(pdf_path), pagesize=letter)
@@ -84,10 +75,8 @@ async def finalize(ticket: str,
     c.setFont("Helvetica", 10)
     total = len(df)
     c.drawString(40, 755, f"Total Violations: {total}")
-    if stacked_path.exists():
-        c.drawImage(str(stacked_path), 40, 450, width=260, height=180)
-    if trend_path.exists():
-        c.drawImage(str(trend_path), 300, 450, width=260, height=180)
+    if chart_path.exists():
+        c.drawImage(str(chart_path), 40, 450, width=520, height=250)
     c.showPage()
 
     region_col = norm.get("tags") or norm.get("region")

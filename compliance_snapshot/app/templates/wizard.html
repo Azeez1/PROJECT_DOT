@@ -42,11 +42,6 @@
     <!-- Chart preview -->
     <canvas id="preview" class="hidden"></canvas>
 
-    <label style="display:block;margin:1rem 0">
-      Trend&nbsp;end&nbsp;date:
-      <input type="date" name="trend_end" id="trend-end">
-      <small>(defaults to latest week if left blank)</small>
-    </label>
 
     <button type="submit">Build PDF</button>
   </form>
@@ -121,34 +116,27 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
+  const idx = cols.findIndex(c => c.toLowerCase().replace(/\s+/g,'_') === 'violation_type');
+  if(idx === -1){ canvas.classList.add('hidden'); return; }
+
+  const counts = {};
+  rows.forEach(r => {
+    const val = r[idx];
+    if(val !== null && val !== undefined && String(val).trim().toLowerCase() !== 'null'){
+      counts[val] = (counts[val] || 0) + 1;
+    }
+  });
+
   const ctx = canvas.getContext('2d');
   const chosen = document.getElementById('chart-type').value;
   document.getElementById('chart-type-hidden').value = chosen;
 
   if(window.currentChart){ window.currentChart.destroy(); }
 
-  const filtered = rows.filter(r => {
-    const lbl = String(r[0] ?? '').trim().toLowerCase();
-    return lbl && lbl !== 'null';
-  }).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  const labels = filtered.map(r => String(r[0]).trim());
-  const numericCols = cols.slice(1);
-  if(!numericCols.length){ canvas.classList.add('hidden'); return; }
-
-  const colors = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'];
-
-  const datasets = numericCols.map((c, i) => ({
-      label: c,
-      data: filtered.map(r => parseFloat(r[i+1]) || 0),
-      borderColor: colors[i % colors.length],
-      backgroundColor: colors[i % colors.length],
-      fill: false
-  }));
-
   canvas.classList.remove('hidden');
   window.currentChart = new Chart(ctx,{
     type: chosen,
-    data:{ labels: labels, datasets: datasets },
+    data:{ labels: Object.keys(counts), datasets:[{label:'count',data:Object.values(counts)}] },
     options:{plugins:{title:{display:true,text:name}}}
   });
 }
