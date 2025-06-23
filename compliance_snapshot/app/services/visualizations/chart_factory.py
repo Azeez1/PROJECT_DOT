@@ -50,6 +50,21 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
     plt.close()
 
 
+<<<<<< codex/add-manual-trend-end-date-control
+def make_trend_line(df, out_path: Path, title: str | None = None) -> None:
+    """Create a simple line chart showing counts per week."""
+    plt.style.use("seaborn-v0_8-whitegrid")
+    counts = df.groupby("week").size().sort_index()
+
+    plt.figure(figsize=(7, 4))
+    counts.plot.line(marker="o")
+    plt.xlabel("Week")
+    plt.ylabel("Count")
+    if title:
+        plt.title(title)
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200)
+=======
 def make_stacked_bar(df, out_path: Path):
     """Create stacked bar chart of violation counts per region."""
     pivot = df.pivot_table(
@@ -84,4 +99,5 @@ def make_trend_line(df, out_path: Path):
     ax.set_ylabel("Count")
     plt.tight_layout()
     plt.savefig(out_path, dpi=160)
+>>>>>> main
     plt.close()
