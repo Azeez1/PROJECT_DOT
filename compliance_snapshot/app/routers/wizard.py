@@ -74,8 +74,9 @@ async def finalize(ticket: str,
     c.showPage(); c.save()
 
     from fastapi.responses import FileResponse
+    # use FileResponse's filename parameter to set the Content-Disposition header
     return FileResponse(
         path=pdf_path,
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=ComplianceSnapshot.pdf"},
+        filename="ComplianceSnapshot.pdf",
     )
