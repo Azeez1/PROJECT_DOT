@@ -96,7 +96,12 @@ async function openTab(table){
   if(idx === -1){ document.getElementById('preview').classList.add('hidden'); return; }
 
   const counts = {};
-  rows.forEach(r=> counts[r[idx]] = (counts[r[idx]]||0)+1);
+  rows.forEach(r=>{
+    const key = r[idx];
+    if(key !== null && key !== undefined && key !== ''){
+      counts[key] = (counts[key]||0) + 1;
+    }
+  });
   const ctx = document.getElementById('preview').getContext('2d');
   document.getElementById('preview').classList.remove('hidden');
   new Chart(ctx,{type:'bar',
