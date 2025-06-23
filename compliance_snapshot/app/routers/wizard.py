@@ -44,6 +44,7 @@ async def finalize(ticket: str,
     # 1) query full (or later: filtered) DataFrame
     con = sqlite3.connect(db_file)
     df = pd.read_sql('SELECT * FROM hos', con)
+    df.columns = [c.strip().lower().replace(' ', '_') for c in df.columns]
 
     # 2) make chart if requested
     charts_dir = Path(f"/tmp/{ticket}/charts"); charts_dir.mkdir(exist_ok=True)
