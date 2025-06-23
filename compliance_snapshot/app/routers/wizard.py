@@ -73,4 +73,9 @@ async def finalize(ticket: str,
         c.drawImage(str(chart_path), 40, 460, width=520, height=250)
     c.showPage(); c.save()
 
-    return RedirectResponse(f"/download/{ticket}", status_code=303)
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=pdf_path,
+        filename="ComplianceSnapshot.pdf",
+        media_type="application/pdf",
+    )
