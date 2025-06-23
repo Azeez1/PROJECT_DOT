@@ -47,3 +47,19 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close()
+
+
+def make_trend_line(df, out_path: Path, title: str | None = None) -> None:
+    """Create a simple line chart showing counts per week."""
+    plt.style.use("seaborn-v0_8-whitegrid")
+    counts = df.groupby("week").size().sort_index()
+
+    plt.figure(figsize=(7, 4))
+    counts.plot.line(marker="o")
+    plt.xlabel("Week")
+    plt.ylabel("Count")
+    if title:
+        plt.title(title)
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200)
+    plt.close()
