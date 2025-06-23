@@ -62,7 +62,7 @@ async function openTab(table){
 
   // build HTML table
   const area = document.getElementById('table-area');
-  area.innerHTML = `<div id="filter"></div>
+  area.innerHTML = `<div id="filters" style="margin-bottom:.5rem"></div>
     <table id="tbl"><thead><tr>${
       columns.map(c=>`<th>${c}</th>`).join('')
     }</tr></thead><tbody></tbody></table>
@@ -74,25 +74,27 @@ async function openTab(table){
     tbody.insertRow().innerHTML = r.map(v=>`<td>${v}</td>`).join('');
   });
   const tbl = $('#tbl').DataTable({
-    deferRender: true,
-    scrollY: 300,
-    scroller: true
+    lengthMenu: [10,25,50,100],
+    pageLength: 10
   });
 
-  // optional filter by violation_type
+  // build column filters
+  const filtersDiv = document.getElementById('filters');
+  filtersDiv.innerHTML = '';
+  columns.forEach((col, i) => {
+    const unique = [...new Set(rows.map(r => r[i]))]
+      .filter(v => v !== null && v !== undefined && v !== '')
+      .sort();
+    const select = document.createElement('select');
+    select.innerHTML = `<option value="">${col}</option>` +
+      unique.map(v => `<option value="${v}">${v}</option>`).join('');
+    select.onchange = () => tbl.column(i).search(select.value).draw();
+    filtersDiv.appendChild(select);
+  });
+
   const idx = columns.findIndex(
     c => c.toLowerCase().replace(/\s+/g, '_') === 'violation_type'
   );
-  if(idx !== -1){
-    const unique = [...new Set(rows.map(r => r[idx]))].sort();
-    const filterDiv = document.getElementById('filter');
-    const select = document.createElement('select');
-    select.innerHTML = `<option value="">All</option>` +
-      unique.map(v=>`<option value="${v}">${v}</option>`).join('');
-    select.onchange = () => tbl.column(idx).search(select.value).draw();
-    filterDiv.innerHTML = '<label>Filter violation type: </label>';
-    filterDiv.appendChild(select);
-  }
   if(idx === -1){ document.getElementById('preview').classList.add('hidden'); return; }
 
   const counts = {};
