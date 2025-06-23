@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from pathlib import Path
+import pandas as pd
 
 
 def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) -> None:
@@ -46,4 +47,41 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
 
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
+    plt.close()
+
+
+def make_stacked_bar(df, out_path: Path):
+    """Create stacked bar chart of violation counts per region."""
+    pivot = df.pivot_table(
+        index="Tags",
+        columns="Violation Type",
+        aggfunc="size",
+        fill_value=0,
+    )
+    ax = pivot.plot.bar(stacked=True, figsize=(6, 3))
+    ax.set_xlabel("")
+    ax.set_ylabel("Count")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=160)
+    plt.close()
+
+
+def make_trend_line(df, out_path: Path):
+    """Create line chart of weekly violation counts."""
+    df2 = df.copy()
+    df2["week"] = pd.to_datetime(df2["WEEK OF..."])
+    pivot = (
+        df2.pivot_table(
+            index="week",
+            columns="Violation Type",
+            aggfunc="size",
+            fill_value=0,
+        )
+        .sort_index()
+    )
+    ax = pivot.plot.line(marker="o", figsize=(6, 3))
+    ax.set_xlabel("")
+    ax.set_ylabel("Count")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=160)
     plt.close()
