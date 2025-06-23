@@ -23,7 +23,7 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
 
     col = normalized["violation_type"]
     df = _drop_null_rows(df, [col])
-    counts = df[col].value_counts()
+    counts = df[col].value_counts().sort_index()
 
     plt.figure(figsize=(7, 4))
     if chart_type == "pie":
@@ -51,11 +51,14 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> None:
     """Create a stacked bar chart of violation counts per region."""
     plt.style.use("seaborn-v0_8-whitegrid")
     df = _drop_null_rows(df, ["Tags", "Violation Type"])
-    pivot = df.pivot_table(
-        index="Tags",
-        columns="Violation Type",
-        aggfunc="size",
-        fill_value=0,
+    pivot = (
+        df.pivot_table(
+            index="Tags",
+            columns="Violation Type",
+            aggfunc="size",
+            fill_value=0,
+        )
+        .sort_index(axis=1)
     )
     ax = pivot.plot.bar(stacked=True, figsize=(7, 4))
     ax.set_xlabel("")
@@ -105,6 +108,7 @@ def make_trend_line(df: pd.DataFrame, out_path: Path) -> None:
                 fill_value=0,
             )
             .sort_index()
+            .sort_index(axis=1)
         )
     else:
         numeric_cols = [c for c in df2.columns if c != "week" and pd.api.types.is_numeric_dtype(df2[c])]
