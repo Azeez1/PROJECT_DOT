@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi import Form
 from fastapi.templating import Jinja2Templates
 import sqlite3
 from pathlib import Path
@@ -45,8 +46,8 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
 
 @router.post("/finalize/{ticket}")
 async def finalize(ticket: str,
-                   chart_hos: str = "on",
-                   chart_type: str = "bar"):
+                   chart_hos: str = Form("on"),
+                   chart_type: str = Form("bar")):
     db_file = _db(ticket)
     if not db_file.exists():
         raise HTTPException(404, "ticket not found")
@@ -78,10 +79,9 @@ async def finalize(ticket: str,
         c.drawImage(str(chart_path), 40, 460, width=520, height=250)
     c.showPage(); c.save()
 
-    from fastapi.responses import FileResponse
-    # use FileResponse's filename parameter to set the Content-Disposition header
     return FileResponse(
         path=pdf_path,
         media_type="application/pdf",
-        filename="ComplianceSnapshot.pdf",
+        headers={"Content-Disposition":
+                 "attachment; filename=ComplianceSnapshot.pdf"},
     )
