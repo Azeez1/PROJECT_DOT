@@ -23,11 +23,8 @@
   <!-- Tabs will be built by JS -->
   <nav id="tabs"></nav>
 
-  <!-- Finalize form (HTMX submit for PDF download) -->
-  <form id="finalize"
-        hx-post="/finalize/{{ ticket }}"
-        hx-include="input"
-        hx-target="body" hx-swap="innerHTML">
+  <!-- Finalize form: generates PDF on submit -->
+  <form id="finalize" action="/finalize/{{ ticket }}" method="post">
     <!-- DataTable injected here -->
     <div id="table-area"></div>
 
@@ -124,26 +121,36 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
-  const idx = cols.findIndex(
-    c => c.toLowerCase().replace(/\s+/g, '_') === 'violation_type'
-  );
-  if(idx === -1){ canvas.classList.add('hidden'); return; }
-
-  const counts = {};
-  rows.forEach(r=> counts[r[idx]] = (counts[r[idx]]||0)+1);
-
   const ctx = canvas.getContext('2d');
-  canvas.classList.remove('hidden');
   const chosen = document.getElementById('chart-type').value;
-  document.getElementById('chart-type-hidden').value = chosen;  // sync for form
+  document.getElementById('chart-type-hidden').value = chosen;
 
-  // wipe previous chart instance if any
   if(window.currentChart){ window.currentChart.destroy(); }
 
-  window.currentChart = new Chart(ctx,{type:chosen,
-    data:{labels:Object.keys(counts),
-          datasets:[{label:'count',data:Object.values(counts)}]},
-    options:{plugins:{title:{display:true,text:name}}}});
+  const filtered = rows.filter(r => {
+    const lbl = String(r[0] ?? '').trim().toLowerCase();
+    return lbl && lbl !== 'null';
+  });
+  const labels = filtered.map(r => String(r[0]).trim());
+  const numericCols = cols.slice(1);
+  if(!numericCols.length){ canvas.classList.add('hidden'); return; }
+
+  const colors = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'];
+
+  const datasets = numericCols.map((c, i) => ({
+      label: c,
+      data: filtered.map(r => parseFloat(r[i+1]) || 0),
+      borderColor: colors[i % colors.length],
+      backgroundColor: colors[i % colors.length],
+      fill: false
+  }));
+
+  canvas.classList.remove('hidden');
+  window.currentChart = new Chart(ctx,{
+    type: chosen,
+    data:{ labels: labels, datasets: datasets },
+    options:{plugins:{title:{display:true,text:name}}}
+  });
 }
 
 // dropdown → redraw chart with new type
