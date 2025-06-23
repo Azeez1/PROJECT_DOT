@@ -116,7 +116,13 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
-  const idx = cols.findIndex(c => c.toLowerCase().replace(/\s+/g,'_') === 'violation_type');
+  // Find the Violation Type column regardless of casing, spaces, or invisible
+  // sort icons that DataTables adds to the header text.
+  const normalize = s => s.toLowerCase()
+                           .replace(/[^a-z\s]/g, '')   // strip non-letters
+                           .replace(/\s+/g, '_')        // spaces → underscore
+                           .trim();
+  const idx = cols.findIndex(c => normalize(c) === 'violation_type');
   if(idx === -1){ canvas.classList.add('hidden'); return; }
 
   const counts = {};
