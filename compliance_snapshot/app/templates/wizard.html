@@ -116,6 +116,12 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
+<<<<< j1ybxu-codex/display-distinct-lines-with-colors-for-violation-types
+  const vtIdx = cols.findIndex(c => c.toLowerCase().replace(/\s+/g,'_') === 'violation_type');
+  if(vtIdx === -1){ canvas.classList.add('hidden'); return; }
+
+  const weekIdx = cols.findIndex(c => c.toLowerCase().replace(/\s+/g,'_') === 'week');
+=======
   // Find the Violation Type column regardless of casing, spaces, or invisible
   // sort icons that DataTables adds to the header text.
   const normalize = s => s.toLowerCase()
@@ -132,6 +138,7 @@ function drawChart(name, rows, cols){
       counts[val] = (counts[val] || 0) + 1;
     }
   });
+>>>>>> main
 
   const ctx = canvas.getContext('2d');
   const chosen = document.getElementById('chart-type').value;
@@ -140,11 +147,46 @@ function drawChart(name, rows, cols){
   if(window.currentChart){ window.currentChart.destroy(); }
 
   canvas.classList.remove('hidden');
-  window.currentChart = new Chart(ctx,{
-    type: chosen,
-    data:{ labels: Object.keys(counts), datasets:[{label:'count',data:Object.values(counts)}] },
-    options:{plugins:{title:{display:true,text:name}}}
-  });
+
+  if(chosen === 'line' && weekIdx !== -1){
+    const counts = {};
+    const weeks = new Set();
+    rows.forEach(r => {
+      const vt = r[vtIdx];
+      const wk = r[weekIdx];
+      if(vt && wk){
+        counts[vt] = counts[vt] || {};
+        counts[vt][wk] = (counts[vt][wk] || 0) + 1;
+        weeks.add(wk);
+      }
+    });
+    const weekLabels = Array.from(weeks).sort();
+    const palette = ['#3366CC','#DC3912','#FF9900','#109618','#990099','#0099C6','#DD4477','#66AA00','#B82E2E','#316395'];
+    const datasets = Object.entries(counts).map(([type, byWeek], i) => ({
+      label: type,
+      data: weekLabels.map(w => byWeek[w] || 0),
+      borderColor: palette[i % palette.length],
+      fill: false
+    }));
+    window.currentChart = new Chart(ctx,{
+      type: 'line',
+      data:{ labels: weekLabels, datasets },
+      options:{plugins:{title:{display:true,text:name}}}
+    });
+  }else{
+    const counts = {};
+    rows.forEach(r => {
+      const val = r[vtIdx];
+      if(val !== null && val !== undefined && String(val).trim().toLowerCase() !== 'null'){
+        counts[val] = (counts[val] || 0) + 1;
+      }
+    });
+    window.currentChart = new Chart(ctx,{
+      type: chosen,
+      data:{ labels: Object.keys(counts), datasets:[{label:'count',data:Object.values(counts)}] },
+      options:{plugins:{title:{display:true,text:name}}}
+    });
+  }
 }
 
 // dropdown → redraw chart with new type
