@@ -116,10 +116,29 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
+<<<<< j1ybxu-codex/display-distinct-lines-with-colors-for-violation-types
   const vtIdx = cols.findIndex(c => c.toLowerCase().replace(/\s+/g,'_') === 'violation_type');
   if(vtIdx === -1){ canvas.classList.add('hidden'); return; }
 
   const weekIdx = cols.findIndex(c => c.toLowerCase().replace(/\s+/g,'_') === 'week');
+=======
+  // Find the Violation Type column regardless of casing, spaces, or invisible
+  // sort icons that DataTables adds to the header text.
+  const normalize = s => s.toLowerCase()
+                           .replace(/[^a-z\s]/g, '')   // strip non-letters
+                           .replace(/\s+/g, '_')        // spaces → underscore
+                           .trim();
+  const idx = cols.findIndex(c => normalize(c) === 'violation_type');
+  if(idx === -1){ canvas.classList.add('hidden'); return; }
+
+  const counts = {};
+  rows.forEach(r => {
+    const val = r[idx];
+    if(val !== null && val !== undefined && String(val).trim().toLowerCase() !== 'null'){
+      counts[val] = (counts[val] || 0) + 1;
+    }
+  });
+>>>>>> main
 
   const ctx = canvas.getContext('2d');
   const chosen = document.getElementById('chart-type').value;
