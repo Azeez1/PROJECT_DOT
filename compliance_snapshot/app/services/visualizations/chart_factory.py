@@ -7,7 +7,7 @@ def _drop_null_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Return ``df`` with ``NaN`` or string "null" rows removed for ``columns``."""
     cleaned = df.dropna(subset=columns)
     for c in columns:
-        cleaned = cleaned[cleaned[c].astype(str).str.lower() != "null"]
+        cleaned = cleaned[cleaned[c].astype(str).str.strip().str.lower() != "null"]
     return cleaned
 
 
