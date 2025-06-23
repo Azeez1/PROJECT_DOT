@@ -76,6 +76,6 @@ async def finalize(ticket: str,
     from fastapi.responses import FileResponse
     return FileResponse(
         path=pdf_path,
-        filename="ComplianceSnapshot.pdf",
         media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=ComplianceSnapshot.pdf"},
     )
