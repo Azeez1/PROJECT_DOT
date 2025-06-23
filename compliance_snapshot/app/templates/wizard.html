@@ -130,7 +130,7 @@ function drawChart(name, rows, cols){
   const filtered = rows.filter(r => {
     const lbl = String(r[0] ?? '').trim().toLowerCase();
     return lbl && lbl !== 'null';
-  });
+  }).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   const labels = filtered.map(r => String(r[0]).trim());
   const numericCols = cols.slice(1);
   if(!numericCols.length){ canvas.classList.add('hidden'); return; }
