@@ -23,17 +23,14 @@
   <!-- Tabs will be built by JS -->
   <nav id="tabs"></nav>
 
-  <!-- DataTable injected here -->
-  <div id="table-area"></div>
+  <!-- Finalize form (standard submit for file download) -->
+  <form id="finalize" action="/finalize/{{ ticket }}" method="post">
+    <!-- DataTable injected here -->
+    <div id="table-area"></div>
 
-  <!-- Chart preview -->
-  <canvas id="preview" class="hidden"></canvas>
+    <!-- Chart preview -->
+    <canvas id="preview" class="hidden"></canvas>
 
-  <!-- Finalize form -->
-  <form id="finalize"
-        hx-post="/finalize/{{ ticket }}"
-        hx-include="[name^='chart_']"
-        hx-target="body" hx-swap="innerHTML">
     <button type="submit">Build PDF</button>
   </form>
 
