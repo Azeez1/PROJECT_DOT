@@ -3,6 +3,14 @@ from pathlib import Path
 import pandas as pd
 
 
+def _drop_null_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Return ``df`` with ``NaN`` or string "null" rows removed for ``columns``."""
+    cleaned = df.dropna(subset=columns)
+    for c in columns:
+        cleaned = cleaned[cleaned[c].astype(str).str.lower() != "null"]
+    return cleaned
+
+
 def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) -> None:
     """Create a stylized chart if the ``violation_type`` column exists."""
 
@@ -14,6 +22,7 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
         return  # silently skip chart generation
 
     col = normalized["violation_type"]
+    df = _drop_null_rows(df, [col])
     counts = df[col].value_counts()
 
     plt.figure(figsize=(7, 4))
@@ -41,6 +50,7 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
 def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> None:
     """Create a stacked bar chart of violation counts per region."""
     plt.style.use("seaborn-v0_8-whitegrid")
+    df = _drop_null_rows(df, ["Tags", "Violation Type"])
     pivot = df.pivot_table(
         index="Tags",
         columns="Violation Type",
@@ -81,9 +91,12 @@ def make_trend_line(df: pd.DataFrame, out_path: Path) -> None:
     else:
         df2["week"] = pd.to_datetime(df2["week"])
 
+    df2 = _drop_null_rows(df2, ["week"])
+
     # Determine which columns to plot. Prefer ``Violation Type`` if present.
     vt_col = normalized.get("violation_type")
     if vt_col:
+        df2 = _drop_null_rows(df2, [vt_col])
         pivot = (
             df2.pivot_table(
                 index="week",
