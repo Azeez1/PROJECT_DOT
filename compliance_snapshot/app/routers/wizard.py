@@ -90,34 +90,85 @@ async def finalize(ticket: str,
         c.drawImage(str(trend_path), 300, 450, width=260, height=180)
     c.showPage()
 
-    region_counts = df.groupby("Tags").size().to_dict() if "Tags" in df.columns else {}
+    region_col = norm.get("tags") or norm.get("region")
+    if region_col:
+        region_counts = df.groupby(region_col).size().to_dict()
+    else:
+        region_counts = {}
     gl = region_counts.get("Great Lakes", 0)
     ov = region_counts.get("Ohio Valley", 0)
     se = region_counts.get("Southeast", 0)
 
     weekly = df.groupby("week").size().sort_index()
     if len(weekly) >= 2:
-        prev, curr = weekly.iloc[-2], weekly.iloc[-1]
+        prev_total, curr_total = weekly.iloc[-2], weekly.iloc[-1]
+        prev_week, curr_week = weekly.index[-2], weekly.index[-1]
     elif len(weekly) == 1:
-        prev = curr = weekly.iloc[0]
+        prev_total = curr_total = weekly.iloc[0]
+        prev_week = curr_week = weekly.index[0]
     else:
-        prev = curr = 0
+        prev_total = curr_total = 0
+        prev_week = curr_week = None
 
-    if curr > prev:
+    if curr_total > prev_total:
         trend = "increased"
-    elif curr < prev:
+    elif curr_total < prev_total:
         trend = "decreased"
     else:
         trend = "remained flat"
 
-    narrative = (
-        f"Total violations: {total}.\n"
-        f"Violations by Region:\n"
-        f"  \u2022 Great Lakes: {gl}\n"
-        f"  \u2022 Ohio Valley: {ov}\n"
-        f"  \u2022 Southeast: {se}\n"
-        f"Week-over-Week Trend: {trend} ({prev} \u2192 {curr})."
-    )
+    # Determine regional weekly counts if week information is available
+    region_weekly = None
+    if curr_week is not None and region_col:
+        region_weekly = (
+            df.pivot_table(index=region_col, columns="week", aggfunc="size", fill_value=0)
+        )
+
+    def _region_line(region: str) -> str:
+        current = region_weekly.loc[region, curr_week] if region_weekly is not None and region in region_weekly.index else region_counts.get(region, 0)
+        if region_weekly is not None and prev_week in region_weekly.columns:
+            prev_val = region_weekly.loc[region, prev_week]
+            diff = current - prev_val
+            diff_str = f"({diff:+d})"
+        else:
+            diff_str = ""
+        return f"  \u2022 {region}: {current} {diff_str}".rstrip()
+
+    # Top violation types and week-over-week diffs
+    vt_col = norm.get("violation_type")
+    top_lines: list[str] = []
+    if vt_col and curr_week is not None:
+        type_week = df.pivot_table(index=vt_col, columns="week", aggfunc="size", fill_value=0)
+        if curr_week in type_week.columns:
+            sorted_types = type_week[curr_week].sort_values(ascending=False)
+            for v_type, curr_val in sorted_types.head(5).items():
+                if prev_week in type_week.columns:
+                    prev_val = int(type_week.at[v_type, prev_week])
+                    diff = curr_val - prev_val
+                    diff_str = f"({diff:+d})"
+                else:
+                    diff_str = ""
+                top_lines.append(f"  \u2022 {v_type}: {int(curr_val)} {diff_str}".rstrip())
+
+    total_diff = curr_total - prev_total
+    total_line = f"Total Violations: {curr_total} ({total_diff:+d})"
+
+    narrative_lines = [
+        total_line,
+        "\u2022 Violations by Region:",
+        _region_line("Great Lakes"),
+        _region_line("Ohio Valley"),
+        _region_line("Southeast"),
+        "\u2022 HOS Violations Week-over-Week Comparison:",
+        f"  \u2022 Trend: {trend}",
+        f"    (Previous Week: {prev_total} \u2192 This Week: {curr_total})",
+    ]
+
+    if top_lines:
+        narrative_lines.append("\u2022 Top Violation Types:")
+        narrative_lines.extend(top_lines)
+
+    narrative = "\n".join(narrative_lines)
 
     c.setFont("Helvetica-Bold", 14)
     c.drawString(40, 750, "HOS Violations Summary")
