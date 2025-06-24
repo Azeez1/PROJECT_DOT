@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+import json
 from datetime import date
 from typing import Dict
 
@@ -134,27 +135,33 @@ def format_trend_data(trend: Dict) -> str:
     return "\n".join(lines)
 
 
+def _make_summary_key(data: Dict) -> str:
+    """Return a stable JSON string for caching."""
+    return json.dumps(data, sort_keys=True)
+
+
 @lru_cache(maxsize=None)
-def generate_summary_insights(summary_data: Dict) -> str:
+def _cached_summary_insights(summary_json: str) -> str:
     """Generate insights for weekly summary using OpenAI."""
+    summary_data: Dict = json.loads(summary_json)
     try:
         prompt = f"""
         Analyze this HOS violations data and provide 2-3 sentences of insights:
-        
+
         Total Violations: {summary_data['total_current']} ({summary_data['total_change']:+})
-        
+
         Regional Changes:
         {format_regional_data(summary_data.get('by_region', {}))}
-        
+
         Top Violations:
         {format_violation_types(summary_data.get('by_type', {}))}
-        
+
         Focus on:
         1. Overall trend (improving/worsening)
         2. Regional patterns
         3. Most concerning violation types
         4. Any positive developments
-        
+
         Keep it concise and actionable.
         """
         response = openai.ChatCompletion.create(
@@ -168,6 +175,11 @@ def generate_summary_insights(summary_data: Dict) -> str:
         return generate_fallback_summary_insights(summary_data)
 
 
+def generate_summary_insights(summary_data: Dict) -> str:
+    summary_json = _make_summary_key(summary_data)
+    return _cached_summary_insights(summary_json)
+
+
 def generate_fallback_summary_insights(summary_data: Dict) -> str:
     change = summary_data.get("total_change", 0)
     if change > 0:
@@ -179,22 +191,27 @@ def generate_fallback_summary_insights(summary_data: Dict) -> str:
     return desc
 
 
+def _make_trend_key(data: Dict) -> str:
+    return json.dumps(data, sort_keys=True)
+
+
 @lru_cache(maxsize=None)
-def generate_trend_insights(trend_data: Dict) -> str:
+def _cached_trend_insights(trend_json: str) -> str:
     """Generate insights for 4-week trend using OpenAI."""
+    trend_data: Dict = json.loads(trend_json)
     try:
         prompt = f"""
         Analyze this 4-week HOS violation trend and provide 3-4 sentences of insights:
-        
+
         Week-by-week data:
         {format_trend_data(trend_data)}
-        
+
         Focus on:
         1. Overall trajectory of each violation type
         2. Which violations are improving vs worsening
         3. Any concerning patterns or positive trends
         4. Recommendations for areas needing attention
-        
+
         Be specific about the data patterns and actionable in recommendations.
         """
         response = openai.ChatCompletion.create(
@@ -206,6 +223,11 @@ def generate_trend_insights(trend_data: Dict) -> str:
         return response.choices[0].message.content.strip()
     except Exception:
         return generate_fallback_trend_insights(trend_data)
+
+
+def generate_trend_insights(trend_data: Dict) -> str:
+    trend_json = _make_trend_key(trend_data)
+    return _cached_trend_insights(trend_json)
 
 
 def generate_fallback_trend_insights(trend_data: Dict) -> str:
