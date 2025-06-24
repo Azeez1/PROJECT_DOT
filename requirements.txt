@@ -7,3 +7,4 @@ matplotlib
 reportlab
 jinja2
 pillow
+openai
