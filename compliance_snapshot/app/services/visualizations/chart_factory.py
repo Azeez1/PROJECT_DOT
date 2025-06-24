@@ -83,7 +83,12 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path):
         .reindex([r[0] for r in regions], fill_value=0)
     )
 
-    ax = pivot.plot.bar(stacked=True, figsize=(6, 3))
+    if pivot.empty or pivot.select_dtypes("number").empty:
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.text(0.5, 0.5, "No data", ha="center", va="center")
+        ax.axis("off")
+    else:
+        ax = pivot.plot.bar(stacked=True, figsize=(6, 3))
     ax.set_title("HOS Violations")
     ax.set_xlabel("")
     ax.set_ylabel("Violation Count")
