@@ -9,6 +9,7 @@ if (buildBtn) {
     e.preventDefault();
     const payload = {
       filters: window.activeFilters,
+      trend_end: document.getElementById('trend-end')?.value || null,
     };
     const res = await fetch(`/finalize/${wizId}`, {
       method: 'POST',

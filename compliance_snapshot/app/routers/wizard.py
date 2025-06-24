@@ -54,8 +54,9 @@ async def finalize(wiz_id: str, request: Request):
 
     payload = await request.json()
     filters = payload.get("filters") or {}
+    trend_end = payload.get("trend_end")
 
-    pdf_path = build_pdf(wiz_id, filters=filters)
+    pdf_path = build_pdf(wiz_id, filters=filters, trend_end=trend_end)
     return FileResponse(
         path=pdf_path,
         media_type="application/pdf",
