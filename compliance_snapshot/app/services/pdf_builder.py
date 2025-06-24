@@ -19,18 +19,31 @@ def load_data(wiz_id: str, table: str) -> pd.DataFrame:
         con.close()
 
 
-def build_pdf(wiz_id: str) -> Path:
+def build_pdf(
+    wiz_id: str,
+    *,
+    filters: dict | None = None,
+    include_charts: bool = True,
+) -> Path:
     tmpdir = Path(f"/tmp/{wiz_id}")
     out_path = tmpdir / "ComplianceSnapshot.pdf"
 
     df = load_data(wiz_id, "hos")
 
+    if filters:
+        for col, val in filters.items():
+            if col in df.columns:
+                df = df[df[col] == val]
+
     # ----- 1️⃣ convert current table -----
     table_data = [df.columns.tolist()] + df.values.tolist()
 
     # ----- charts -----
-    bar_path = make_stacked_bar(df, tmpdir / "bar.png")
-    trend_path = make_trend_line(df, tmpdir / "trend.png")
+    if include_charts:
+        bar_path = make_stacked_bar(df, tmpdir / "bar.png")
+        trend_path = make_trend_line(df, tmpdir / "trend.png")
+    else:
+        bar_path = trend_path = None
 
     # ----- build the PDF -----
     styles = getSampleStyleSheet()
@@ -41,9 +54,13 @@ def build_pdf(wiz_id: str) -> Path:
         Paragraph("HOS Violations Snapshot", styles["Heading1"]),
         Table(table_data, repeatRows=1, hAlign="LEFT"),
         Spacer(1, 12),
-        Image(str(bar_path), width=480, height=260),
-        Spacer(1, 12),
-        Image(str(trend_path), width=480, height=260),
     ]
+
+    if include_charts and bar_path and trend_path:
+        story.extend([
+            Image(str(bar_path), width=480, height=260),
+            Spacer(1, 12),
+            Image(str(trend_path), width=480, height=260),
+        ])
     doc.build(story)
     return out_path

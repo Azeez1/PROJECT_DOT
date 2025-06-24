@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import sqlite3
 from pathlib import Path
@@ -41,10 +41,14 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
 
 
 @router.post("/finalize/{wiz_id}")
-async def finalize(wiz_id: str):
+async def finalize(wiz_id: str, request: Request):
     db_file = _db(wiz_id)
     if not db_file.exists():
         raise HTTPException(404, "ticket not found")
 
-    pdf_path = build_pdf(wiz_id)
-    return FileResponse(pdf_path, filename="DOT-Snapshot.pdf")
+    payload = await request.json()
+    filters = payload.get("filters") or {}
+    include_charts = bool(payload.get("include_charts", True))
+
+    build_pdf(wiz_id, filters=filters, include_charts=include_charts)
+    return RedirectResponse(url=f"/download/{wiz_id}", status_code=303)

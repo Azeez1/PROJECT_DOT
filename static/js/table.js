@@ -7,7 +7,7 @@ export async function buildTable(selector, columns) {
   // Build the header cells
   headerRow.innerHTML = columns.map(c => `<th>${c}</th>`).join("");
 
-  const filters = {};                // {col: value}
+  const filters = window.activeFilters || (window.activeFilters = {}); // {col: value}
 
   // initial fetch + render
   let df = await fetchData(filters);
