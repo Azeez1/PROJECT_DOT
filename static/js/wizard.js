@@ -1,18 +1,10 @@
-const form = document.getElementById('finalize');
+const form = document.querySelector('#finalize-form');
 if (form) {
-  form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const data = new FormData(form);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
     const wizId = window.ticket || form.dataset.ticket;
-    await fetch(`/finalize/${wizId}`, {
-      method: 'POST',
-      body: data
-    });
-    const link = document.createElement('a');
-    link.href = `/download/${wizId}`;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const res = await fetch(`/finalize/${wizId}`, { method: 'POST', body: data });
+    window.location = res.headers.get('Location');      // triggers download
   });
 }

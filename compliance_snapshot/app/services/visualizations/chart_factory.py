@@ -47,31 +47,30 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
     plt.close()
 
 
-def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> None:
+def make_stacked_bar(df: pd.DataFrame, out_path: Path):
     """Create a stacked bar chart of violation counts per region."""
 
     plt.style.use("seaborn-v0_8-whitegrid")
     df = _drop_null_rows(df, ["Tags", "Violation Type"])
-    pivot = (
-        df.pivot_table(
-            index="Tags",            # x-axis labels (e.g. GL, OV, SE)
-            columns="Violation Type", # stacked bars by violation type
-            aggfunc="size",
-            fill_value=0,
-        )
-        .sort_index(axis=1)
+    pivot = df.pivot_table(
+        index="Tags",            # OV / GL / SE on X-axis
+        columns="Violation Type",
+        aggfunc="size",
+        fill_value=0,
     )
 
     ax = pivot.plot.bar(stacked=True, figsize=(6, 3))
-    plt.xticks(rotation=0)  # keep region labels horizontal
-    ax.set_xlabel("")
-    ax.set_ylabel("Count")
+    ax.set_title("HOS Violations by Region Tag")
+    ax.set_xlabel("Region Tags (OV / GL / SE)")
+    ax.set_ylabel("Violation Count")
+    plt.xticks(rotation=0)
     plt.tight_layout()
     plt.savefig(out_path, dpi=160)
     plt.close()
+    return out_path
 
 
-def make_trend_line(df: pd.DataFrame, out_path: Path) -> None:
+def make_trend_line(df: pd.DataFrame, out_path: Path):
     """Create a line chart of weekly violation counts.
 
     The function is resilient to variations in the week column name and
@@ -126,3 +125,4 @@ def make_trend_line(df: pd.DataFrame, out_path: Path) -> None:
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close()
+    return out_path
