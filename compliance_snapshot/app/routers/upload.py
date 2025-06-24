@@ -1,10 +1,13 @@
-from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import uuid
+import io
+from datetime import date
 
 from ..core.utils import save_uploads
+from ..services.pdf_generator import build_pdf
 import sqlite3, pandas as pd
 
 router = APIRouter()
@@ -44,8 +47,32 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
 @router.get("/download/{ticket}", tags=["generate"])
 async def download(ticket: str):
-    pdf_path = Path(f"/tmp/{ticket}/snapshot.pdf")
+    """Return the generated PDF as a downloadable file."""
+    pdf_path = Path(f"/tmp/{ticket}/ComplianceSnapshot.pdf")
     if not pdf_path.exists():
-        return JSONResponse({"status": "processing"})
-    return FileResponse(pdf_path, filename="ComplianceSnapshot.pdf")
+        raise HTTPException(status_code=404, detail="snapshot not found")
+
+    # FastAPI adds 'attachment' disposition when filename is provided
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=f"DOT_Compliance_{ticket[:8]}.pdf",
+    )
+
+
+@router.post("/build_pdf", tags=["generate"])
+async def build_pdf_endpoint(file: UploadFile = File(...), end_date: date | None = None):
+    """Generate a simple PDF directly from an uploaded HOS file."""
+    contents = await file.read()
+    if file.filename.lower().endswith(".csv"):
+        df = pd.read_csv(io.BytesIO(contents))
+    else:
+        df = pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+
+    pdf_bytes = build_pdf(df, end_date)
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=DOT_Compliance_Snapshot.pdf"},
+    )
 
