@@ -54,9 +54,8 @@ async def finalize(wiz_id: str, request: Request):
 
     payload = await request.json()
     filters = payload.get("filters") or {}
-    include_charts = bool(payload.get("include_charts", True))
 
-    pdf_path = build_pdf(wiz_id, filters=filters, include_charts=include_charts)
+    pdf_path = build_pdf(wiz_id, filters=filters)
     return FileResponse(
         path=pdf_path,
         media_type="application/pdf",

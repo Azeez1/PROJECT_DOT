@@ -13,7 +13,6 @@ from reportlab.platypus import (
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet
 
-from .visualizations.chart_factory import make_stacked_bar, make_trend_line
 
 
 def load_data(wiz_id: str, table: str) -> pd.DataFrame:
@@ -29,7 +28,6 @@ def build_pdf(
     wiz_id: str,
     *,
     filters: dict | None = None,
-    include_charts: bool = True,
     include_table: bool = False,
 ) -> Path:
     tmpdir = Path(f"/tmp/{wiz_id}")
@@ -48,12 +46,6 @@ def build_pdf(
     else:
         table_data = []
 
-    # ----- charts -----
-    if include_charts:
-        bar_path = make_stacked_bar(df, tmpdir / "bar.png")
-        trend_path = make_trend_line(df, tmpdir / "trend.png")
-    else:
-        bar_path = trend_path = None
 
     # ----- build the PDF -----
     styles = getSampleStyleSheet()
@@ -64,12 +56,5 @@ def build_pdf(
 
     if include_table and table_data:
         story.extend([Table(table_data, repeatRows=1, hAlign="LEFT"), Spacer(1, 12)])
-
-    if include_charts and bar_path and trend_path:
-        story.extend([
-            Image(str(bar_path), width=480, height=260),
-            Spacer(1, 12),
-            Image(str(trend_path), width=480, height=260),
-        ])
     doc.build(story)
     return out_path
