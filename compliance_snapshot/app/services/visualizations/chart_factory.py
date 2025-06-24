@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import math
 from pathlib import Path
 import pandas as pd
 
@@ -9,6 +10,21 @@ def _drop_null_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     for c in columns:
         cleaned = cleaned[cleaned[c].astype(str).str.strip().str.lower() != "null"]
     return cleaned
+
+
+def _calc_axis_limits(max_value: int) -> tuple[int, int]:
+    """Return a nice upper limit and tick interval for ``max_value``."""
+    steps = [5, 10, 25, 50, 100, 250, 500, 1000]
+    max_value = int(max_value)
+    if max_value <= 0:
+        return 5, 5
+    for step in steps:
+        if max_value <= step * 10:
+            break
+    else:
+        step = steps[-1]
+    upper = int(math.ceil(max_value / step) * step)
+    return upper, step
 
 
 def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) -> None:
@@ -53,17 +69,17 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     plt.style.use("dark_background")
     df = _drop_null_rows(df, ["Tags", "Violation Type"])
 
-    # --- normalize regions to GL, OV, SE only ---
-    regions = ["GL", "OV", "SE"]
-    region_map = {abbr: abbr for abbr in regions}
+    region_lookup = {
+        "great lakes": "GL",
+        "ohio valley": "OV",
+        "southeast": "SE",
+    }
 
-    df2 = pd.DataFrame(columns=["Region", "Violation Type"])
-    for abbr in regions:
-        mask = df["Tags"].astype(str).str.contains(abbr, case=False, na=False)
-        sub = df[mask].copy()
-        if not sub.empty:
-            sub["Region"] = region_map[abbr]
-            df2 = pd.concat([df2, sub], ignore_index=True)
+    df2 = df.copy()
+    df2["Region"] = (
+        df2["Tags"].astype(str).str.strip().str.lower().map(region_lookup)
+    )
+    df2 = df2[df2["Region"].notna()]
 
     # Normalize violation type labels
     vt_aliases = {
@@ -86,25 +102,20 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     ]
 
     pivot = (
-        df2.pivot_table(
-            index="Region",
-            columns="Violation Type",
-            aggfunc="size",
-            fill_value=0,
-        )
-        .reindex(regions, fill_value=0)
+        df2.groupby(["Region", "Violation Type"]).size().unstack(fill_value=0)
+        .reindex(index=["GL", "OV", "SE"], fill_value=0)
         .reindex(columns=desired_types, fill_value=0)
     )
 
     fig, ax = plt.subplots(figsize=(6, 3))
-    fig.patch.set_facecolor("#333333")
-    ax.set_facecolor("#333333")
+    fig.patch.set_facecolor("#2B2B2B")
+    ax.set_facecolor("#2B2B2B")
 
     if pivot.empty or pivot.select_dtypes("number").empty:
         ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
         ax.axis("off")
     else:
-        colors = ["#00bcd4", "#ff8c00", "#ffff00", "#808080"]
+        colors = ["#00CED1", "#FF8C00", "#FFD700", "#808080"]
         pivot.plot.bar(
             stacked=True,
             ax=ax,
@@ -112,18 +123,22 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
             width=0.6,
         )
 
+    bar_totals = pivot.sum(axis=1)
+    ymax, step = _calc_axis_limits(bar_totals.max() if not bar_totals.empty else 0)
+
     ax.set_title("HOS Violations", color="white")
     ax.set_xlabel("")
     ax.set_ylabel("Violation Count", color="white")
-    ax.set_ylim(0, 120)
-    ax.set_yticks(range(0, 121, 20))
+    ax.set_ylim(0, ymax)
+    ax.set_yticks(range(0, ymax + step, step))
     ax.tick_params(colors="white")
     ax.legend(title=None, labelcolor="white")
 
     total = int(pivot.values.sum()) if not pivot.empty else 0
-    ax.text(0.5, 1.05, f"Total {total}", transform=ax.transAxes, ha="center", color="white")
+    ax.text(0.5, 1.05, f"TOTAL: {total}", transform=ax.transAxes, ha="center", color="white")
 
-    plt.xticks(rotation=0, color="white")
+    ax.set_xticklabels(pivot.index.tolist(), color="white")
+    plt.xticks(rotation=0)
     plt.tight_layout()
     plt.savefig(out_path, dpi=200)
     plt.close()
@@ -188,15 +203,16 @@ def make_trend_line(
             "cycle limit": "Cycle Limit",
         }
         df2[vt_col] = (
-            df2[vt_col].astype(str).str.strip().str.lower().map(vt_aliases).fillna(df2[vt_col])
+            df2[vt_col]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .map(vt_aliases)
+            .fillna(df2[vt_col])
         )
         pivot = (
-            df2.pivot_table(
-                index="week_of",
-                columns=vt_col,
-                aggfunc="size",
-                fill_value=0,
-            )
+            df2.groupby(["week_of", vt_col]).size().unstack(fill_value=0)
+            .groupby(level=0).sum()
             .reindex(target_dates, fill_value=0)
             .reindex(columns=list(vt_aliases.values()), fill_value=0)
         )
@@ -209,10 +225,10 @@ def make_trend_line(
             .reindex(target_dates, fill_value=0)
         )
 
-    colors = ["#00bcd4", "#ff8c00", "#ffff00", "#808080"]
+    colors = ["#00CED1", "#FF8C00", "#FFD700", "#808080"]
     fig, ax = plt.subplots(figsize=(7, 4))
-    fig.patch.set_facecolor("#333333")
-    ax.set_facecolor("#333333")
+    fig.patch.set_facecolor("#2B2B2B")
+    ax.set_facecolor("#2B2B2B")
 
     if pivot.empty or pivot.select_dtypes("number").empty:
         ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
@@ -227,12 +243,14 @@ def make_trend_line(
                 label=col,
             )
 
+    ymax, step = _calc_axis_limits(pivot.values.max() if not pivot.empty else 0)
+
     ax.set_xlabel("")
     ax.set_ylabel("Count", color="white")
     ax.set_xticks(range(len(target_dates)))
     ax.set_xticklabels([d.strftime("%m/%d/%Y") for d in target_dates], color="white")
-    ax.set_ylim(0, 200)
-    ax.set_yticks(range(0, 201, 50))
+    ax.set_ylim(0, ymax)
+    ax.set_yticks(range(0, ymax + step, step))
     ax.tick_params(colors="white")
     ax.legend(loc="upper left", frameon=False, labelcolor="white")
     ax.set_title("HOS 4-Week Trend Analysis", color="white")
