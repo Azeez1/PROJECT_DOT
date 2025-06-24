@@ -27,6 +27,27 @@ def _calc_axis_limits(max_value: int) -> tuple[int, int]:
     return upper, step
 
 
+def _normalize_violation_types(series: pd.Series) -> pd.Series:
+    """Normalize violation type text and emit debug output."""
+    lower = series.astype(str).str.strip().str.lower()
+    print("DEBUG unique raw violation types:", sorted(lower.unique()))
+
+    def mapper(v: str) -> str:
+        if "missing" in v and "cert" in v:
+            return "Missing Certifications"
+        if "shift duty limit" in v:
+            return "Shift Duty Limit"
+        if "shift driving limit" in v:
+            return "Shift Driving Limit"
+        if "cycle limit" in v:
+            return "Cycle Limit"
+        return v.title()
+
+    mapped = lower.map(mapper)
+    print("DEBUG unique normalized violation types:", sorted(mapped.unique()))
+    return mapped
+
+
 def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) -> None:
     """Create a stylized chart if the ``violation_type`` column exists."""
 
@@ -82,17 +103,8 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     )
     df2 = df2[df2["Region"].notna()]
 
-    # Normalize violation type labels
-    vt_aliases = {
-        "missing certifications": "Missing Certifications",
-        "missing certification": "Missing Certifications",
-        "shift duty limit": "Shift Duty Limit",
-        "shift driving limit": "Shift Driving Limit",
-        "cycle limit": "Cycle Limit",
-    }
-    df2["Violation Type"] = (
-        df2["Violation Type"].astype(str).str.strip().str.lower().map(vt_aliases).fillna(df2["Violation Type"])
-    )
+    # Normalize violation type labels and show debug info
+    df2["Violation Type"] = _normalize_violation_types(df2["Violation Type"])
 
     # Only keep desired violation types
     desired_types = [
@@ -116,7 +128,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
         ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
         ax.axis("off")
     else:
-        colors = ["#00CED1", "#FF8C00", "#FFD700", "#808080"]
+        colors = ["#00D9FF", "#FF6B35", "#F7931E", "#C4C4C4"]
         pivot.plot.bar(
             stacked=True,
             ax=ax,
@@ -196,26 +208,18 @@ def make_trend_line(
     vt_col = normalized.get("violation_type")
     if vt_col:
         df2 = _drop_null_rows(df2, [vt_col])
-        vt_aliases = {
-            "missing certifications": "Missing Certifications",
-            "missing certification": "Missing Certifications",
-            "shift duty limit": "Shift Duty Limit",
-            "shift driving limit": "Shift Driving Limit",
-            "cycle limit": "Cycle Limit",
-        }
-        df2[vt_col] = (
-            df2[vt_col]
-            .astype(str)
-            .str.strip()
-            .str.lower()
-            .map(vt_aliases)
-            .fillna(df2[vt_col])
-        )
+        df2[vt_col] = _normalize_violation_types(df2[vt_col])
+        desired_cols = [
+            "Missing Certifications",
+            "Shift Duty Limit",
+            "Shift Driving Limit",
+            "Cycle Limit",
+        ]
         pivot = (
             df2.groupby(["week_of", vt_col]).size().unstack(fill_value=0)
             .groupby(level=0).sum()
             .reindex(target_dates, fill_value=0)
-            .reindex(columns=list(vt_aliases.values()), fill_value=0)
+            .reindex(columns=desired_cols, fill_value=0)
         )
     else:
         numeric_cols = [c for c in df2.columns if c not in {"week", "week_of"} and pd.api.types.is_numeric_dtype(df2[c])]
@@ -226,7 +230,7 @@ def make_trend_line(
             .reindex(target_dates, fill_value=0)
         )
 
-    colors = ["#00CED1", "#FF8C00", "#FFD700", "#808080"]
+    colors = ["#00D9FF", "#FF6B35", "#F7931E", "#C4C4C4"]
     fig, ax = plt.subplots(figsize=(7, 4))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
