@@ -33,17 +33,11 @@
       <select id="chart-type">
         <option value="bar" selected>Bar</option>
         <option value="pie">Pie</option>
-        <option value="line">Line</option>
       </select>
     </label>
     <!-- hidden field that goes to /finalize -->
     <input type="hidden" name="chart_type" id="chart-type-hidden" value="bar">
 
-    <!-- Toggle whether to include charts in the final PDF -->
-    <label style="margin-top:.5rem;display:block">
-       <input type="checkbox" id="include-charts" checked>
-       include charts
-    </label>
 
     <!-- Chart preview -->
     <canvas id="preview" class="hidden"></canvas>
@@ -105,15 +99,11 @@ async function openTab(table){
   function updatePreview(){
       const table     = $('#tbl').DataTable();
       const searchStr = table.search();
-      const include   = document.getElementById('include-charts').checked;
 
       // propagate hidden fields for /finalize
-      $('#filter-search-hidden').val(include ? searchStr : "");
-      $('#chart-type-hidden').val(
-          include ? document.getElementById('chart-type').value : "bar"
-      );
+      $('#filter-search-hidden').val(searchStr);
+      $('#chart-type-hidden').val(document.getElementById('chart-type').value);
 
-      if(!include){ document.getElementById('preview').classList.add('hidden'); return; }
       document.getElementById('preview').classList.remove('hidden');
 
       const rows = searchStr ? table.rows({search:'applied'}).data().toArray()
@@ -124,8 +114,6 @@ async function openTab(table){
 
   $('#tbl').on('draw.dt', updatePreview);       // fires after search OR pagination
   document.getElementById('chart-type')
-          .addEventListener('change', updatePreview);
-  document.getElementById('include-charts')
           .addEventListener('change', updatePreview);
 
   // initial render
@@ -175,32 +163,7 @@ function drawChart(name, rows, cols){
 
   canvas.classList.remove('hidden');
 
-  if(chosen === 'line' && weekIdx !== -1){
-    const counts = {};
-    const weeks = new Set();
-    rows.forEach(r => {
-      const vt = r[vtIdx];
-      const wk = r[weekIdx];
-      if(vt && wk){
-        counts[vt] = counts[vt] || {};
-        counts[vt][wk] = (counts[vt][wk] || 0) + 1;
-        weeks.add(wk);
-      }
-    });
-    const weekLabels = Array.from(weeks).sort();
-    const palette = ['#3366CC','#DC3912','#FF9900','#109618','#990099','#0099C6','#DD4477','#66AA00','#B82E2E','#316395'];
-    const datasets = Object.entries(counts).map(([type, byWeek], i) => ({
-      label: type,
-      data: weekLabels.map(w => byWeek[w] || 0),
-      borderColor: palette[i % palette.length],
-      fill: false
-    }));
-    window.currentChart = new Chart(ctx,{
-      type: 'line',
-      data:{ labels: weekLabels, datasets },
-      options:{plugins:{title:{display:true,text:name}}}
-    });
-  }else{
+  {
     const counts = {};
     rows.forEach(r => {
       const val = r[vtIdx];
