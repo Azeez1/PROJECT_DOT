@@ -39,10 +39,10 @@
     <!-- hidden field that goes to /finalize -->
     <input type="hidden" name="chart_type" id="chart-type-hidden" value="bar">
 
-    <!-- Toggle whether to include the chart -->
+    <!-- Toggle whether to include charts in the final PDF -->
     <label style="margin-top:.5rem;display:block">
-       <input type="checkbox" id="include-chart" checked>
-       include chart
+       <input type="checkbox" id="include-charts" checked>
+       include charts
     </label>
 
     <!-- Chart preview -->
@@ -83,6 +83,9 @@ async function openTab(table){
   const {columns, rows} = await res.json();
   window.tableName = table;  // remember current table
 
+  window.activeFilters = window.activeFilters || {};
+  const filters = window.activeFilters;
+
   // build HTML table
   const area = document.getElementById('table-area');
   area.innerHTML = `<div id="filters" style="margin-bottom:.5rem"></div>
@@ -102,7 +105,7 @@ async function openTab(table){
   function updatePreview(){
       const table     = $('#tbl').DataTable();
       const searchStr = table.search();
-      const include   = document.getElementById('include-chart').checked;
+      const include   = document.getElementById('include-charts').checked;
 
       // propagate hidden fields for /finalize
       $('#filter-search-hidden').val(include ? searchStr : "");
@@ -122,7 +125,7 @@ async function openTab(table){
   $('#tbl').on('draw.dt', updatePreview);       // fires after search OR pagination
   document.getElementById('chart-type')
           .addEventListener('change', updatePreview);
-  document.getElementById('include-chart')
+  document.getElementById('include-charts')
           .addEventListener('change', updatePreview);
 
   // initial render
@@ -138,7 +141,11 @@ async function openTab(table){
     const select = document.createElement('select');
     select.innerHTML = `<option value="">${col}</option>` +
       unique.map(v => `<option value="${v}">${v}</option>`).join('');
-    select.onchange = () => tbl.column(i).search(select.value).draw();
+    select.onchange = () => {
+      if(select.value) filters[col] = select.value;
+      else delete filters[col];
+      dt.column(i).search(select.value).draw();
+    };
     filtersDiv.appendChild(select);
   });
 
