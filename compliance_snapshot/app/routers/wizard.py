@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi import Form
 from fastapi.templating import Jinja2Templates
 import sqlite3
@@ -179,8 +179,5 @@ async def finalize(ticket: str,
     c.showPage()
     c.save()
 
-    return FileResponse(
-        path=pdf_path,
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=ComplianceSnapshot.pdf"},
-    )
+    # PDF is now ready for download via /download
+    return JSONResponse({"status": "ok"})
