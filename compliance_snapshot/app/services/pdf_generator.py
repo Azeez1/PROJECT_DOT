@@ -25,12 +25,7 @@ def build_pdf(hos_df: pd.DataFrame, end_date: Optional[date] = None) -> bytes:
         bar_path = Path(bar_tmp.name)
         trend_path = Path(trend_tmp.name)
         make_stacked_bar(hos_df, bar_path)
-        # ``make_trend_line`` in repository does not require ``end_date``
-        try:
-            make_trend_line(hos_df, trend_path)
-        except TypeError:
-            # If newer signature requires end_date
-            make_trend_line(hos_df, end_date, trend_path)  # type: ignore
+        make_trend_line(hos_df, end_date, trend_path)
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)

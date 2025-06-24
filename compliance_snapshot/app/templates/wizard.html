@@ -143,38 +143,102 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
-  // Find the Violation Type column regardless of casing, spaces, or invisible
-  // sort icons that DataTables adds to the header text.
-  const normalize = s => s.toLowerCase()
-                           .replace(/[^a-z\s]/g, '')   // strip non-letters
-                           .replace(/\s+/g, '_')        // spaces \u2192 underscore
-                           .trim();
-  const vtIdx = cols.findIndex(c => normalize(c) === 'violation_type');
+  const normalize = s => s.toLowerCase().replace(/[^a-z\s]/g,'').replace(/\s+/g,'_').trim();
+  const vtIdx   = cols.findIndex(c => normalize(c) === 'violation_type');
+  const tagIdx  = cols.findIndex(c => normalize(c) === 'tags');
+  const weekIdx = cols.findIndex(c => normalize(c) === 'week');
   if(vtIdx === -1){ canvas.classList.add('hidden'); return; }
 
-  const weekIdx = cols.findIndex(c => normalize(c) === 'week');
-
-
   const ctx = canvas.getContext('2d');
-  const chosen = document.getElementById('chart-type').value;
-  document.getElementById('chart-type-hidden').value = chosen;
-
   if(window.currentChart){ window.currentChart.destroy(); }
-
   canvas.classList.remove('hidden');
+  canvas.style.backgroundColor = '#333';
 
-  {
+  const colors = {
+    'Missing Certifications': '#00bcd4',
+    'Shift Duty Limit': '#ff8c00',
+    'Shift Driving Limit': '#ffff00',
+    'Cycle Limit': '#808080'
+  };
+  const canonical = v => {
+    const t = String(v||'').toLowerCase();
+    if(t.startsWith('missing')) return 'Missing Certifications';
+    if(t.includes('duty')) return 'Shift Duty Limit';
+    if(t.includes('driving')) return 'Shift Driving Limit';
+    if(t.includes('cycle')) return 'Cycle Limit';
+    return v;
+  };
+
+  if(weekIdx !== -1){
+    const endStr = document.getElementById('trend-end').value;
+    const endDate = endStr ? new Date(endStr) : new Date(rows[rows.length-1][weekIdx]);
+    const startOfWeek = d => { const x=new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; };
+    const endMon = startOfWeek(endDate);
+    const weeks = [3,2,1,0].map(i=> new Date(endMon.getTime()-i*7*24*60*60*1000));
     const counts = {};
-    rows.forEach(r => {
-      const val = r[vtIdx];
-      if(val !== null && val !== undefined && String(val).trim().toLowerCase() !== 'null'){
-        counts[val] = (counts[val] || 0) + 1;
+    rows.forEach(r=>{
+      const type = canonical(r[vtIdx]);
+      const wk   = startOfWeek(new Date(r[weekIdx])).getTime();
+      if(!weeks.some(w=>w.getTime()===wk)) return;
+      counts[type] = counts[type] || {};
+      counts[type][wk] = (counts[type][wk]||0)+1;
+    });
+    const labels = weeks.map(w=>`${w.getMonth()+1}/${w.getDate()}/${w.getFullYear()}`);
+    const datasets = Object.entries(colors).map(([t,c])=>({
+      label: t,
+      data: weeks.map(w=>counts[t]?.[w.getTime()]||0),
+      borderColor: c,
+      backgroundColor: c,
+      fill: false
+    }));
+    window.currentChart = new Chart(ctx,{
+      type: 'line',
+      data:{ labels, datasets },
+      options:{
+        scales:{
+          x:{ ticks:{color:'white'} },
+          y:{ beginAtZero:true, max:200, ticks:{stepSize:50,color:'white'} }
+        },
+        plugins:{
+          title:{display:true,text:'HOS 4-Week Trend Analysis',color:'white'},
+          legend:{labels:{color:'white'}}
+        }
       }
     });
+    return;
+  }
+
+  if(tagIdx !== -1){
+    const regions = ['GL','OV','SE'];
+    const counts = {};
+    rows.forEach(r=>{
+      const tag = String(r[tagIdx]||'').toUpperCase();
+      const reg = regions.find(x=>tag.includes(x));
+      if(!reg) return;
+      const type = canonical(r[vtIdx]);
+      counts[reg] = counts[reg] || {};
+      counts[reg][type] = (counts[reg][type]||0)+1;
+    });
+    const datasets = Object.entries(colors).map(([t,c])=>({
+      label:t,
+      data: regions.map(r=>counts[r]?.[t]||0),
+      backgroundColor:c
+    }));
+    const total = datasets.reduce((s,d)=>s+d.data.reduce((a,b)=>a+b,0),0);
     window.currentChart = new Chart(ctx,{
-      type: chosen,
-      data:{ labels: Object.keys(counts), datasets:[{label:'count',data:Object.values(counts)}] },
-      options:{plugins:{title:{display:true,text:name}}}
+      type:'bar',
+      data:{ labels: regions, datasets },
+      options:{
+        scales:{
+          x:{ stacked:true, ticks:{color:'white'} },
+          y:{ beginAtZero:true, stacked:true, max:120, ticks:{stepSize:20,color:'white'} }
+        },
+        plugins:{
+          title:{display:true,text:'HOS Violations',color:'white'},
+          legend:{labels:{color:'white'}},
+          subtitle:{display:true,text:`Total ${total}`,color:'white'}
+        }
+      }
     });
   }
 }
