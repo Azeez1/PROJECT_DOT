@@ -33,7 +33,6 @@
       <select id="chart-type">
         <option value="bar" selected>Bar</option>
         <option value="pie">Pie</option>
-        <option value="line">Line</option>
       </select>
     </label>
     <!-- hidden field that goes to /finalize -->
@@ -45,17 +44,35 @@
 
     <input type="hidden" name="filter_search" id="filter-search-hidden" value="">
 
-    <label style="display:block;margin:1rem 0">
-      Trend&nbsp;end&nbsp;date:
-      <input type="date" name="trend_end" id="trend-end">
-      <small>(defaults to latest week if left blank)</small>
-    </label>
+      <label style="display:block;margin:1rem 0">
+        Trend&nbsp;end&nbsp;date:
+        <input type="date" name="trend_end" id="trend-end">
+        <small>(defaults to latest week if left blank)</small>
+        <small id="monday-note">(Mondays only)</small>
+      </label>
 
     <button id="build-pdf" type="submit">Build PDF</button>
   </form>
 
 <script>
 const ticket = "{{ ticket }}";
+
+// restrict trend-end to Mondays
+const trendInput = document.getElementById('trend-end');
+if(trendInput){
+  trendInput.addEventListener('change', ()=>{
+    const d = new Date(trendInput.value);
+    if(isNaN(d)) return;
+    const day = d.getDay();
+    if(day !== 1){
+      const diff = day === 0 ? 6 : day - 1;
+      d.setDate(d.getDate() - diff);
+      trendInput.value = d.toISOString().split('T')[0];
+      trendInput.style.borderColor = 'red';
+      setTimeout(()=> trendInput.style.borderColor = '', 1000);
+    }
+  });
+}
 
 // ---------- build tab buttons ----------
 async function loadTabs(){
