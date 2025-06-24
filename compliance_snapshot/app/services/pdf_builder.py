@@ -13,6 +13,13 @@ from reportlab.platypus import (
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet
 
+from .report_generator import (
+    generate_hos_violations_summary,
+    generate_hos_trend_analysis,
+    generate_summary_insights,
+    generate_trend_insights,
+)
+
 from .visualizations.chart_factory import make_stacked_bar, make_trend_line
 
 
@@ -53,6 +60,11 @@ def build_pdf(
     bar_path = make_stacked_bar(df, tmpdir / "bar.png")
     trend_path = make_trend_line(df, end_date, tmpdir / "trend.png")
 
+    summary_data = generate_hos_violations_summary(df, end_date or pd.Timestamp.utcnow().date())
+    trend_data = generate_hos_trend_analysis(df, end_date or pd.Timestamp.utcnow().date())
+    summary_insights = generate_summary_insights(summary_data)
+    trend_insights = generate_trend_insights(trend_data)
+
 
     # ----- build the PDF -----
     styles = getSampleStyleSheet()
@@ -65,9 +77,39 @@ def build_pdf(
         story.extend([Table(table_data, repeatRows=1, hAlign="LEFT"), Spacer(1, 12)])
 
     story.extend([
+        Paragraph("HOS Violations Summary", styles["Heading2"]),
+        Paragraph(
+            f"Total Violations: {summary_data['total_current']} ({summary_data['total_change']:+})",
+            styles["Normal"],
+        ),
+    ])
+
+    for region, data in summary_data.get("by_region", {}).items():
+        story.append(
+            Paragraph(
+                f"{region}: {data['current']} ({data['change']:+})",
+                styles["Normal"],
+            )
+        )
+
+    story.append(Paragraph("Top Violation Types:", styles["Normal"]))
+    for vt, data in summary_data.get("by_type", {}).items():
+        story.append(
+            Paragraph(
+                f"{vt}: {data['current']} ({data['change']:+})",
+                styles["Normal"],
+            )
+        )
+
+    story.append(Paragraph(summary_insights, styles["Normal"]))
+    story.append(Spacer(1, 12))
+
+    story.extend([
         Image(str(bar_path), width=450, height=225),
         Spacer(1, 12),
+        Paragraph("HOS Violation Trend (4 weeks)", styles["Heading2"]),
         Image(str(trend_path), width=450, height=225),
+        Paragraph(trend_insights, styles["Normal"]),
     ])
 
     doc.build(story)

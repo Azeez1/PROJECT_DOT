@@ -48,6 +48,11 @@ def _normalize_violation_types(series: pd.Series) -> pd.Series:
     return mapped
 
 
+def normalize_violation_types(series: pd.Series) -> pd.Series:
+    """Public wrapper for ``_normalize_violation_types``."""
+    return _normalize_violation_types(series)
+
+
 def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) -> None:
     """Create a stylized chart if the ``violation_type`` column exists."""
 
