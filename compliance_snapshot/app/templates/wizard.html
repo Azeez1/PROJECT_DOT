@@ -39,6 +39,12 @@
     <!-- hidden field that goes to /finalize -->
     <input type="hidden" name="chart_type" id="chart-type-hidden" value="bar">
 
+    <!-- Toggle whether to include the chart -->
+    <label style="margin-top:.5rem;display:block">
+       <input type="checkbox" id="include-chart" checked>
+       include chart
+    </label>
+
     <!-- Chart preview -->
     <canvas id="preview" class="hidden"></canvas>
 
@@ -96,11 +102,15 @@ async function openTab(table){
   function updatePreview(){
       const table     = $('#tbl').DataTable();
       const searchStr = table.search();
+      const include   = document.getElementById('include-chart').checked;
 
       // propagate hidden fields for /finalize
-      $('#filter-search-hidden').val(searchStr);
-      $('#chart-type-hidden').val(document.getElementById('chart-type').value);
+      $('#filter-search-hidden').val(include ? searchStr : "");
+      $('#chart-type-hidden').val(
+          include ? document.getElementById('chart-type').value : "bar"
+      );
 
+      if(!include){ document.getElementById('preview').classList.add('hidden'); return; }
       document.getElementById('preview').classList.remove('hidden');
 
       const rows = searchStr ? table.rows({search:'applied'}).data().toArray()
@@ -111,6 +121,8 @@ async function openTab(table){
 
   $('#tbl').on('draw.dt', updatePreview);       // fires after search OR pagination
   document.getElementById('chart-type')
+          .addEventListener('change', updatePreview);
+  document.getElementById('include-chart')
           .addEventListener('change', updatePreview);
 
   // initial render
