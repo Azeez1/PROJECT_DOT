@@ -58,7 +58,7 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
     if title:
         plt.title(title)
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(out_path, dpi=200)
     plt.close()
 
@@ -72,6 +72,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     region_lookup = {
         "great lakes": "GL",
         "ohio valley": "OV",
+        "midwest": "MW",
         "southeast": "SE",
     }
 
@@ -103,7 +104,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
 
     pivot = (
         df2.groupby(["Region", "Violation Type"]).size().unstack(fill_value=0)
-        .reindex(index=["GL", "OV", "SE"], fill_value=0)
+        .reindex(index=["GL", "OV", "MW", "SE"], fill_value=0)
         .reindex(columns=desired_types, fill_value=0)
     )
 
@@ -126,7 +127,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     bar_totals = pivot.sum(axis=1)
     ymax, step = _calc_axis_limits(bar_totals.max() if not bar_totals.empty else 0)
 
-    ax.set_title("HOS Violations", color="white")
+    ax.set_title("HOS Violations", color="white", pad=15)
     ax.set_xlabel("")
     ax.set_ylabel("Violation Count", color="white")
     ax.set_ylim(0, ymax)
@@ -135,11 +136,11 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     ax.legend(title=None, labelcolor="white")
 
     total = int(pivot.values.sum()) if not pivot.empty else 0
-    ax.text(0.5, 1.05, f"TOTAL: {total}", transform=ax.transAxes, ha="center", color="white")
+    ax.text(0.5, 1.1, f"TOTAL: {total}", transform=ax.transAxes, ha="center", color="white")
 
     ax.set_xticklabels(pivot.index.tolist(), color="white")
     plt.xticks(rotation=0)
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(out_path, dpi=200)
     plt.close()
     return out_path
@@ -242,8 +243,12 @@ def make_trend_line(
                 color=colors[idx % len(colors)],
                 label=col,
             )
+        handles, labels = ax.get_legend_handles_labels()
+        uniq = dict(zip(labels, handles))
+        ax.legend(uniq.values(), uniq.keys(), loc="upper left", frameon=False, labelcolor="white")
 
-    ymax, step = _calc_axis_limits(pivot.values.max() if not pivot.empty else 0)
+    max_val = pivot.values.max() if not pivot.empty else 0
+    ymax, step = _calc_axis_limits(int(max_val * 1.1))
 
     ax.set_xlabel("")
     ax.set_ylabel("Count", color="white")
@@ -252,10 +257,9 @@ def make_trend_line(
     ax.set_ylim(0, ymax)
     ax.set_yticks(range(0, ymax + step, step))
     ax.tick_params(colors="white")
-    ax.legend(loc="upper left", frameon=False, labelcolor="white")
     ax.set_title("HOS 4-Week Trend Analysis", color="white")
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(out_path, dpi=200)
     plt.close()
     return out_path
