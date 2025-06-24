@@ -24,7 +24,10 @@
   <nav id="tabs"></nav>
 
   <!-- Finalize form: generates PDF on submit -->
-  <form id="finalize" action="/finalize/{{ ticket }}" method="post">
+  <form id="finalize"
+        hx-post="/finalize/{{ ticket }}"
+        hx-include="input"
+        hx-target="body" hx-swap="innerHTML">
     <!-- DataTable injected here -->
     <div id="table-area"></div>
 
@@ -40,7 +43,13 @@
     <input type="hidden" name="chart_type" id="chart-type-hidden" value="bar">
 
     <!-- Chart preview -->
+    <label style="margin-top:.5rem;display:block">
+       <input type="checkbox" name="chart_hos" id="include-chart" checked>
+       include chart
+    </label>
     <canvas id="preview" class="hidden"></canvas>
+
+    <input type="hidden" name="filter_search" id="filter-search-hidden" value="">
 
 
     <button type="submit">Build PDF</button>
@@ -83,17 +92,39 @@ async function openTab(table){
   rows.forEach(r=>{
     tbody.insertRow().innerHTML = r.map(v=>`<td>${v}</td>`).join('');
   });
-  const tbl = $('#tbl').DataTable({
+  const dt      = $('#tbl').DataTable({
     lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'All']],
     pageLength: 10
   });
+  window.allRows = dt.rows().data().toArray();              // snapshot of full data
 
-  // When any table filter/search/paging happens, redraw the chart
-  $('#tbl').on('draw.dt', () => {
-      const table = $('#tbl').DataTable();
-      const rows  = table.rows({search:'applied'}).data().toArray();
-      drawChart(tableName, rows, columns);
-  });
+  function updatePreview(){
+      const table     = $('#tbl').DataTable();
+      const searchStr = table.search();
+      const include   = document.getElementById('include-chart').checked;
+
+      // propagate hidden fields for /finalize
+      $('#filter-search-hidden').val(include ? searchStr : "");
+      $('#chart-type-hidden').val(
+          include ? document.getElementById('chart-type').value : "bar"
+      );
+
+      if(!include){ document.getElementById('preview').classList.add('hidden'); return; }
+
+      const rows = searchStr ? table.rows({search:'applied'}).data().toArray()
+                             : window.allRows;
+      const cols = table.columns().header().toArray().map(th=>th.innerText);
+      drawChart('hos', rows, cols);
+  }
+
+  $('#tbl').on('draw.dt', updatePreview);       // fires after search OR pagination
+  document.getElementById('chart-type')
+          .addEventListener('change', updatePreview);
+  document.getElementById('include-chart')
+          .addEventListener('change', updatePreview);
+
+  // initial render
+  updatePreview();
 
   // build column filters
   const filtersDiv = document.getElementById('filters');
@@ -109,7 +140,6 @@ async function openTab(table){
     filtersDiv.appendChild(select);
   });
 
-  drawChart(table, rows, columns);
 }
 
 function drawChart(name, rows, cols){
@@ -177,12 +207,6 @@ function drawChart(name, rows, cols){
   }
 }
 
-// dropdown → redraw chart with new type
-document.getElementById('chart-type').addEventListener('change', ()=>{
-    const table = $('#tbl').DataTable();
-    const rows  = table.rows({search:'applied'}).data().toArray();
-    const cols  = table.columns().header().toArray().map(th=>th.innerText);
-    drawChart('hos', rows, cols);
-});
+/* old per-change hook removed; combined into updatePreview */
 </script>
 </body></html>
