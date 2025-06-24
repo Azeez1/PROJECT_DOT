@@ -12,13 +12,15 @@ if (buildBtn) {
       filters: window.activeFilters,
       include_charts: incChk ? incChk.checked : true,
     };
-    await fetch(`/finalize/${wizId}`, {
+    const res = await fetch(`/finalize/${wizId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    const res = await fetch(`/download/${wizId}`);
+    if (!res.ok) {
+      alert('Failed to build PDF');
+      return;
+    }
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
