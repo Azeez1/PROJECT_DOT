@@ -8,3 +8,4 @@ reportlab
 jinja2
 pillow
 openai
+openai
