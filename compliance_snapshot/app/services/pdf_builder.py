@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import sqlite3
 import pandas as pd
-from reportlab.platypus import BaseDocTemplate, Paragraph, Table, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, Image
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet
 
@@ -34,7 +34,9 @@ def build_pdf(wiz_id: str) -> Path:
 
     # ----- build the PDF -----
     styles = getSampleStyleSheet()
-    doc = BaseDocTemplate(str(out_path), pagesize=LETTER)
+    # Use ``SimpleDocTemplate`` so we don't need to manage custom page
+    # templates for this straightforward document.
+    doc = SimpleDocTemplate(str(out_path), pagesize=LETTER)
     story = [
         Paragraph("HOS Violations Snapshot", styles["Heading1"]),
         Table(table_data, repeatRows=1, hAlign="LEFT"),
