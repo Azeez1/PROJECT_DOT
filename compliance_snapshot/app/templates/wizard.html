@@ -24,7 +24,7 @@
   <nav id="tabs"></nav>
 
   <!-- Finalize form: generates PDF on submit -->
-  <form id="finalize" data-ticket="{{ ticket }}">
+  <form id="finalize-form" data-ticket="{{ ticket }}">
     <!-- DataTable injected here -->
     <div id="table-area"></div>
 
@@ -40,10 +40,6 @@
     <input type="hidden" name="chart_type" id="chart-type-hidden" value="bar">
 
     <!-- Chart preview -->
-    <label style="margin-top:.5rem;display:block">
-       <input type="checkbox" name="chart_hos" id="include-chart" checked>
-       include chart
-    </label>
     <canvas id="preview" class="hidden"></canvas>
 
     <input type="hidden" name="filter_search" id="filter-search-hidden" value="">
@@ -54,7 +50,7 @@
       <small>(defaults to latest week if left blank)</small>
     </label>
 
-    <button type="submit">Build PDF</button>
+    <button id="build-pdf" type="submit">Build PDF</button>
   </form>
 
 <script>
@@ -86,10 +82,7 @@ async function openTab(table){
   area.innerHTML = `<div id="filters" style="margin-bottom:.5rem"></div>
     <table id="tbl"><thead><tr>${
       columns.map(c=>`<th>${c}</th>`).join('')
-    }</tr></thead><tbody></tbody></table>
-    <label style="display:block;margin:.5rem 0">
-      <input type="checkbox" name="chart_${table}" checked> include chart
-    </label>`;
+    }</tr></thead><tbody></tbody></table>`;
   const tbody = area.querySelector('tbody');
   rows.forEach(r=>{
     tbody.insertRow().innerHTML = r.map(v=>`<td>${v}</td>`).join('');
@@ -103,15 +96,12 @@ async function openTab(table){
   function updatePreview(){
       const table     = $('#tbl').DataTable();
       const searchStr = table.search();
-      const include   = document.getElementById('include-chart').checked;
 
       // propagate hidden fields for /finalize
-      $('#filter-search-hidden').val(include ? searchStr : "");
-      $('#chart-type-hidden').val(
-          include ? document.getElementById('chart-type').value : "bar"
-      );
+      $('#filter-search-hidden').val(searchStr);
+      $('#chart-type-hidden').val(document.getElementById('chart-type').value);
 
-      if(!include){ document.getElementById('preview').classList.add('hidden'); return; }
+      document.getElementById('preview').classList.remove('hidden');
 
       const rows = searchStr ? table.rows({search:'applied'}).data().toArray()
                              : window.allRows;
@@ -121,8 +111,6 @@ async function openTab(table){
 
   $('#tbl').on('draw.dt', updatePreview);       // fires after search OR pagination
   document.getElementById('chart-type')
-          .addEventListener('change', updatePreview);
-  document.getElementById('include-chart')
           .addEventListener('change', updatePreview);
 
   // initial render
