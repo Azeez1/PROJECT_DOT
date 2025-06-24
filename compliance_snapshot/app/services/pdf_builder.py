@@ -3,7 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 import sqlite3
 import pandas as pd
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer, Image
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Table,
+    Spacer,
+    Image,
+)
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet
 
@@ -24,6 +30,7 @@ def build_pdf(
     *,
     filters: dict | None = None,
     include_charts: bool = True,
+    include_table: bool = False,
 ) -> Path:
     tmpdir = Path(f"/tmp/{wiz_id}")
     out_path = tmpdir / "ComplianceSnapshot.pdf"
@@ -35,8 +42,11 @@ def build_pdf(
             if col in df.columns:
                 df = df[df[col] == val]
 
-    # ----- 1️⃣ convert current table -----
-    table_data = [df.columns.tolist()] + df.values.tolist()
+    # ----- table data -----
+    if include_table:
+        table_data = [df.columns.tolist()] + df.values.tolist()
+    else:
+        table_data = []
 
     # ----- charts -----
     if include_charts:
@@ -50,11 +60,10 @@ def build_pdf(
     # Use ``SimpleDocTemplate`` so we don't need to manage custom page
     # templates for this straightforward document.
     doc = SimpleDocTemplate(str(out_path), pagesize=LETTER)
-    story = [
-        Paragraph("HOS Violations Snapshot", styles["Heading1"]),
-        Table(table_data, repeatRows=1, hAlign="LEFT"),
-        Spacer(1, 12),
-    ]
+    story = [Paragraph("HOS Violations Snapshot", styles["Heading1"])]
+
+    if include_table and table_data:
+        story.extend([Table(table_data, repeatRows=1, hAlign="LEFT"), Spacer(1, 12)])
 
     if include_charts and bar_path and trend_path:
         story.extend([
