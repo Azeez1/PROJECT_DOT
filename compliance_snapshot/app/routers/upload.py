@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, HTTPException
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import uuid
@@ -44,8 +44,15 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
 @router.get("/download/{ticket}", tags=["generate"])
 async def download(ticket: str):
-    pdf_path = Path(f"/tmp/{ticket}/snapshot.pdf")
+    """Return the generated PDF as a downloadable file."""
+    pdf_path = Path(f"/tmp/{ticket}/ComplianceSnapshot.pdf")
     if not pdf_path.exists():
-        return JSONResponse({"status": "processing"})
-    return FileResponse(pdf_path, filename="ComplianceSnapshot.pdf")
+        raise HTTPException(status_code=404, detail="snapshot not found")
+
+    # FastAPI adds 'attachment' disposition when filename is provided
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=f"DOT_Compliance_{ticket[:8]}.pdf",
+    )
 

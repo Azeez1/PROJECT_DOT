@@ -24,10 +24,7 @@
   <nav id="tabs"></nav>
 
   <!-- Finalize form: generates PDF on submit -->
-  <form id="finalize"
-        hx-post="/finalize/{{ ticket }}"
-        hx-include="input"
-        hx-target="body" hx-swap="innerHTML">
+  <form id="finalize" data-ticket="{{ ticket }}">
     <!-- DataTable injected here -->
     <div id="table-area"></div>
 
@@ -212,6 +209,6 @@ function drawChart(name, rows, cols){
   }
 }
 
-/* old per-change hook removed; combined into updatePreview */
 </script>
+<script src="/static/js/wizard.js"></script>
 </body></html>
