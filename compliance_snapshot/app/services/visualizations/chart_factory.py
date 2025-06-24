@@ -128,7 +128,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
         ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
         ax.axis("off")
     else:
-        colors = ["#00D9FF", "#FF6B35", "#F7931E", "#C4C4C4"]
+        colors = ["#00D9FF", "#FF6B35", "#F7931E", "#39FF14"]
         pivot.plot.bar(
             stacked=True,
             ax=ax,
@@ -139,19 +139,26 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     bar_totals = pivot.sum(axis=1)
     ymax, step = _calc_axis_limits(bar_totals.max() if not bar_totals.empty else 0)
 
-    ax.set_title("HOS Violations", color="white", pad=15)
+    ax.set_title("HOS Violations", color="white", pad=20)
     ax.set_xlabel("")
     ax.set_ylabel("Violation Count", color="white")
     ax.set_ylim(0, ymax)
     ax.set_yticks(range(0, ymax + step, step))
     ax.tick_params(colors="white")
-    ax.legend(title=None, labelcolor="white")
+    ax.legend(
+        title=None,
+        labelcolor="white",
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        frameon=False,
+    )
 
     total = int(pivot.values.sum()) if not pivot.empty else 0
-    ax.text(0.5, 1.1, f"TOTAL: {total}", transform=ax.transAxes, ha="center", color="white")
+    ax.text(0.5, 1.08, f"TOTAL: {total}", transform=ax.transAxes, ha="center", color="white")
 
     ax.set_xticklabels(pivot.index.tolist(), color="white")
     plt.xticks(rotation=0)
+    plt.subplots_adjust(right=0.8)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(out_path, dpi=200)
     plt.close()
@@ -230,7 +237,7 @@ def make_trend_line(
             .reindex(target_dates, fill_value=0)
         )
 
-    colors = ["#00D9FF", "#FF6B35", "#F7931E", "#C4C4C4"]
+    colors = ["#00D9FF", "#FF6B35", "#F7931E", "#39FF14"]
     fig, ax = plt.subplots(figsize=(7, 4))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
@@ -249,20 +256,34 @@ def make_trend_line(
             )
         handles, labels = ax.get_legend_handles_labels()
         uniq = dict(zip(labels, handles))
-        ax.legend(uniq.values(), uniq.keys(), loc="upper left", frameon=False, labelcolor="white")
+        ax.legend(
+            uniq.values(),
+            uniq.keys(),
+            bbox_to_anchor=(1.05, 1),
+            loc="upper left",
+            frameon=False,
+            labelcolor="white",
+        )
 
-    max_val = pivot.values.max() if not pivot.empty else 0
-    ymax, step = _calc_axis_limits(int(max_val * 1.1))
+    data_min = pivot.values.min() if not pivot.empty else 0
+    data_max = pivot.values.max() if not pivot.empty else 0
+    data_range = data_max - data_min
+    if data_range == 0:
+        data_range = max(data_max, 1)
+    y_min = min(-10, data_min - data_range * 0.05)
+    y_max_raw = data_max + data_range * 0.1
+    ymax, step = _calc_axis_limits(int(y_max_raw))
 
     ax.set_xlabel("")
     ax.set_ylabel("Count", color="white")
     ax.set_xticks(range(len(target_dates)))
     ax.set_xticklabels([d.strftime("%m/%d/%Y") for d in target_dates], color="white")
-    ax.set_ylim(0, ymax)
-    ax.set_yticks(range(0, ymax + step, step))
+    ax.set_ylim(y_min, ymax)
+    ax.set_yticks(range(int(math.floor(y_min)), ymax + step, step))
     ax.tick_params(colors="white")
     ax.set_title("HOS 4-Week Trend Analysis", color="white")
 
+    plt.subplots_adjust(right=0.8)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(out_path, dpi=200)
     plt.close()
