@@ -46,7 +46,7 @@
 
       <label style="display:block;margin:1rem 0">
         Trend&nbsp;end&nbsp;date:
-        <input type="date" name="trend_end" id="trend-end" min="1970-01-05" step="7">
+        <input type="date" name="trend_end" id="trend-end" min="1970-01-05">
         <small>(defaults to latest week if left blank)</small>
         <small id="monday-note">(Mondays only)</small>
       </label>
@@ -61,7 +61,8 @@ const ticket = "{{ ticket }}";
 const trendInput = document.getElementById('trend-end');
 if(trendInput){
   trendInput.addEventListener('change', ()=>{
-    const d = new Date(trendInput.value);
+    const [y,m,dt] = trendInput.value.split("-").map(Number);
+    const d = new Date(y, m - 1, dt);
     if(isNaN(d)) return;
     const day = d.getDay();
     if(day !== 1){
