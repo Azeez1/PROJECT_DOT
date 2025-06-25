@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            color: #333;
+        }
+
+        .summary-section {
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            margin: 20px 0;
+        }
+
+        .insights-box {
+            background-color: #f5f5f5;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0 40px 0;
+            font-style: italic;
+        }
+
+        .insights-box h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>HOS Violations Snapshot</h1>
+
+    <div class="summary-section">
+        <h2>HOS Violations Summary</h2>
+        <p><strong>Total Violations:</strong> {{ total_current }} ({{ '+' if total_change >= 0 else '' }}{{ total_change }})</p>
+
+        <p><strong>Violations by Region:</strong></p>
+        <ul>
+            {% for region, data in by_region.items() %}
+            <li>{{ region }}: {{ data.current }} ({{ '+' if data.change >= 0 else '' }}{{ data.change }})</li>
+            {% endfor %}
+        </ul>
+
+        <p><strong>Top Violation Types:</strong></p>
+        <ul>
+            {% for violation, data in by_type.items() %}
+            <li>{{ violation }}: {{ data.current }} ({{ '+' if data.change >= 0 else '' }}{{ data.change }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="chart-container">
+        {{ hos_violations_chart|safe }}
+    </div>
+
+    <div class="insights-box">
+        <h3>Insights:</h3>
+        <p>{{ summary_insights }}</p>
+    </div>
+
+    <h2>HOS Violation Trend (4 weeks)</h2>
+    <div class="chart-container">
+        {{ hos_trend_chart|safe }}
+    </div>
+    <div class="insights-box">
+        <h3>Insights:</h3>
+        <p>{{ trend_insights }}</p>
+    </div>
+</body>
+</html>

@@ -5,12 +5,12 @@ from datetime import date
 from typing import Dict
 
 import pandas as pd
-import openai
+from openai import OpenAI
 
 from .visualizations.chart_factory import normalize_violation_types
 
-# Configure OpenAI via Replit environment variable
-openai.api_key = os.environ.get("OPEN_API_KEY")
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPEN_API_KEY"))
 
 
 def _standardize_columns(df: pd.DataFrame) -> dict:
@@ -150,7 +150,7 @@ def _cached_summary_insights(summary_json: str) -> str:
     """Generate insights for weekly summary using OpenAI."""
     summary_data: Dict = json.loads(summary_json)
     try:
-        if not openai.api_key:
+        if not os.environ.get("OPEN_API_KEY"):
             print("WARNING: No OpenAI API key found, using fallback")
             return generate_fallback_summary_insights(summary_data)
 
@@ -168,8 +168,8 @@ def _cached_summary_insights(summary_json: str) -> str:
         Focus on: overall trend, regional patterns, concerning violations, and positive developments.
         """
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150,
             temperature=0.7,
@@ -234,7 +234,7 @@ def _cached_trend_insights(trend_json: str) -> str:
     """Generate insights for 4-week trend using OpenAI."""
     trend_data: Dict = json.loads(trend_json)
     try:
-        if not openai.api_key:
+        if not os.environ.get("OPEN_API_KEY"):
             print("WARNING: No OpenAI API key found, using fallback")
             return generate_fallback_trend_insights(trend_data)
 
@@ -252,8 +252,8 @@ def _cached_trend_insights(trend_json: str) -> str:
 
         Be specific about the data patterns and actionable in recommendations.
         """
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0.7,

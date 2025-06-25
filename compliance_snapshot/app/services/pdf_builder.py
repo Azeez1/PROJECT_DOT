@@ -105,16 +105,15 @@ def build_pdf(
             )
         )
 
+    story.append(Image(str(bar_path), width=450, height=225))
+    story.append(Spacer(1, 12))
     story.append(Paragraph(summary_insights, styles["Normal"]))
     story.append(Spacer(1, 12))
 
-    story.append(Image(str(bar_path), width=450, height=225))
-    story.append(Spacer(1, 12))
-
     story.append(Paragraph("HOS Violation Trend (4 weeks)", styles["Heading2"]))
-    story.append(Paragraph(trend_insights, styles["Normal"]))
-    story.append(Spacer(1, 12))
     story.append(Image(str(trend_path), width=450, height=225))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(trend_insights, styles["Normal"]))
 
     doc.build(story)
     return out_path
