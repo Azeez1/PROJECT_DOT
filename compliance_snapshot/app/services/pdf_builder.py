@@ -124,9 +124,9 @@ def build_pdf(
     story.append(Spacer(1, 20))
 
     # Add both charts at the top of the page
-    story.append(Image(str(bar_path), width=450, height=300))
+    story.append(Image(str(bar_path), width=350, height=230))
     story.append(Spacer(1, 12))
-    story.append(Image(str(trend_path), width=450, height=300))
+    story.append(Image(str(trend_path), width=350, height=230))
 
     # Force page break to start Page 2
     story.append(PageBreak())
