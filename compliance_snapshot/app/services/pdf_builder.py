@@ -62,7 +62,11 @@ def build_pdf(
 
     summary_data = generate_hos_violations_summary(df, end_date or pd.Timestamp.utcnow().date())
     trend_data = generate_hos_trend_analysis(df, end_date or pd.Timestamp.utcnow().date())
+
+    print(f"DEBUG: Calling generate_summary_insights...")
     summary_insights = generate_summary_insights(summary_data)
+    print(f"DEBUG: Generated insights: {summary_insights}")
+
     trend_insights = generate_trend_insights(trend_data)
 
 
@@ -104,13 +108,13 @@ def build_pdf(
     story.append(Paragraph(summary_insights, styles["Normal"]))
     story.append(Spacer(1, 12))
 
-    story.extend([
-        Image(str(bar_path), width=450, height=225),
-        Spacer(1, 12),
-        Paragraph("HOS Violation Trend (4 weeks)", styles["Heading2"]),
-        Image(str(trend_path), width=450, height=225),
-        Paragraph(trend_insights, styles["Normal"]),
-    ])
+    story.append(Image(str(bar_path), width=450, height=225))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("HOS Violation Trend (4 weeks)", styles["Heading2"]))
+    story.append(Paragraph(trend_insights, styles["Normal"]))
+    story.append(Spacer(1, 12))
+    story.append(Image(str(trend_path), width=450, height=225))
 
     doc.build(story)
     return out_path

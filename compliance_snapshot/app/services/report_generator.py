@@ -72,13 +72,18 @@ def generate_hos_violations_summary(df: pd.DataFrame, trend_end_date: date) -> D
             by_type[vt] = {"current": cur, "change": cur - prev}
         by_type = dict(sorted(by_type.items(), key=lambda x: x[1]["current"], reverse=True))
 
-    return {
+    summary = {
         "total_current": int(total_current),
         "total_previous": int(total_previous),
         "total_change": int(total_change),
         "by_region": by_region,
         "by_type": by_type,
     }
+
+    print(f"DEBUG: summary_data = {summary}")
+    print("DEBUG: Calling generate_summary_insights...")
+
+    return summary
 
 
 def generate_hos_trend_analysis(df: pd.DataFrame, trend_end_date: date) -> Dict:
@@ -145,6 +150,10 @@ def _cached_summary_insights(summary_json: str) -> str:
     """Generate insights for weekly summary using OpenAI."""
     summary_data: Dict = json.loads(summary_json)
     try:
+        if not openai.api_key:
+            print("WARNING: No OpenAI API key found, using fallback")
+            return generate_fallback_summary_insights(summary_data)
+
         prompt = f"""
         Analyze this HOS violations data and provide 2-3 sentences of insights:
 
@@ -153,25 +162,23 @@ def _cached_summary_insights(summary_json: str) -> str:
         Regional Changes:
         {format_regional_data(summary_data.get('by_region', {}))}
 
-        Top Violations:
+        Top Violation Types:
         {format_violation_types(summary_data.get('by_type', {}))}
 
-        Focus on:
-        1. Overall trend (improving/worsening)
-        2. Regional patterns
-        3. Most concerning violation types
-        4. Any positive developments
-
-        Keep it concise and actionable.
+        Focus on: overall trend, regional patterns, concerning violations, and positive developments.
         """
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150,
             temperature=0.7,
         )
-        return response.choices[0].message.content.strip()
-    except Exception:
+        insights = response.choices[0].message.content.strip()
+        print(f"DEBUG: Generated insights: {insights}")
+        return insights
+    except Exception as e:
+        print(f"ERROR in generate_summary_insights: {e}")
         return generate_fallback_summary_insights(summary_data)
 
 
@@ -181,14 +188,41 @@ def generate_summary_insights(summary_data: Dict) -> str:
 
 
 def generate_fallback_summary_insights(summary_data: Dict) -> str:
-    change = summary_data.get("total_change", 0)
-    if change > 0:
-        desc = f"Violations increased by {change}."
-    elif change < 0:
-        desc = f"Violations decreased by {abs(change)}."
-    else:
-        desc = "Violations were unchanged week over week."
-    return desc
+    """Fallback summary analysis when OpenAI is unavailable."""
+    total_change = summary_data.get("total_change", 0)
+    trend = (
+        "increased" if total_change > 0 else "decreased" if total_change < 0 else "remained stable"
+    )
+
+    by_region = summary_data.get("by_region", {})
+    biggest_change_region = None
+    biggest_change = 0
+    for region, data in by_region.items():
+        if abs(data.get("change", 0)) > abs(biggest_change):
+            biggest_change = data.get("change", 0)
+            biggest_change_region = region
+
+    by_type = summary_data.get("by_type", {})
+    top_violation = None
+    top_count = 0
+    for vt, data in by_type.items():
+        if data.get("current", 0) > top_count:
+            top_count = data.get("current", 0)
+            top_violation = vt
+
+    insights = (
+        f"Although the total number of violations {trend} to {summary_data.get('total_current', 0)}, "
+        "the distribution reflects regional variability. "
+    )
+
+    if biggest_change_region:
+        change_word = "improved" if biggest_change < 0 else "saw an increase"
+        insights += f"{biggest_change_region} {change_word} by {abs(biggest_change)}. "
+
+    if top_violation:
+        insights += f"{top_violation} remains the top issue at {top_count}. "
+
+    return insights
 
 
 def _make_trend_key(data: Dict) -> str:
@@ -200,6 +234,10 @@ def _cached_trend_insights(trend_json: str) -> str:
     """Generate insights for 4-week trend using OpenAI."""
     trend_data: Dict = json.loads(trend_json)
     try:
+        if not openai.api_key:
+            print("WARNING: No OpenAI API key found, using fallback")
+            return generate_fallback_trend_insights(trend_data)
+
         prompt = f"""
         Analyze this 4-week HOS violation trend and provide 3-4 sentences of insights:
 
@@ -220,8 +258,11 @@ def _cached_trend_insights(trend_json: str) -> str:
             max_tokens=200,
             temperature=0.7,
         )
-        return response.choices[0].message.content.strip()
-    except Exception:
+        insights = response.choices[0].message.content.strip()
+        print(f"DEBUG: Generated trend insights: {insights}")
+        return insights
+    except Exception as e:
+        print(f"ERROR in generate_trend_insights: {e}")
         return generate_fallback_trend_insights(trend_data)
 
 
