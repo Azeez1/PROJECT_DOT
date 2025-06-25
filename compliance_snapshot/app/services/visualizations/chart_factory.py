@@ -3,6 +3,14 @@ import math
 from pathlib import Path
 import pandas as pd
 
+VIOLATION_TYPES = [
+    "Missing Certifications",
+    "Shift Duty Limit",
+    "Shift Driving Limit",
+    "Cycle Limit",
+    "Missed Rest Break",
+]
+
 
 def _drop_null_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Return ``df`` with ``NaN`` or string "null" rows removed for ``columns``."""
@@ -41,6 +49,8 @@ def _normalize_violation_types(series: pd.Series) -> pd.Series:
             return "Shift Driving Limit"
         if "cycle limit" in v:
             return "Cycle Limit"
+        if "missed rest break" in v:
+            return "Missed Rest Break"
         return v.title()
 
     mapped = lower.map(mapper)
@@ -112,12 +122,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     df2["Violation Type"] = _normalize_violation_types(df2["Violation Type"])
 
     # Only keep desired violation types
-    desired_types = [
-        "Missing Certifications",
-        "Shift Duty Limit",
-        "Shift Driving Limit",
-        "Cycle Limit",
-    ]
+    desired_types = VIOLATION_TYPES
 
     pivot = (
         df2.groupby(["Region", "Violation Type"]).size().unstack(fill_value=0)
@@ -221,12 +226,7 @@ def make_trend_line(
     if vt_col:
         df2 = _drop_null_rows(df2, [vt_col])
         df2[vt_col] = _normalize_violation_types(df2[vt_col])
-        desired_cols = [
-            "Missing Certifications",
-            "Shift Duty Limit",
-            "Shift Driving Limit",
-            "Cycle Limit",
-        ]
+        desired_cols = VIOLATION_TYPES
         pivot = (
             df2.groupby(["week_of", vt_col]).size().unstack(fill_value=0)
             .groupby(level=0).sum()
