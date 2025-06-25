@@ -22,6 +22,15 @@ from .report_generator import (
 
 from .visualizations.chart_factory import make_stacked_bar, make_trend_line
 
+import re
+
+
+def convert_html_to_reportlab(text: str) -> str:
+    """Convert HTML span tags to ReportLab font tags."""
+    if not text:
+        return ""
+    return re.sub(r'<span style="color:\s*red;">([^<]+)</span>', r'<font color="red">\1</font>', text)
+
 
 
 def load_data(wiz_id: str, table: str) -> pd.DataFrame:
@@ -68,6 +77,10 @@ def build_pdf(
     print(f"DEBUG: Generated insights: {summary_insights}")
 
     trend_insights = generate_trend_insights(trend_data)
+
+    # Convert potential HTML to ReportLab-safe tags
+    summary_insights = convert_html_to_reportlab(summary_insights)
+    trend_insights = convert_html_to_reportlab(trend_insights)
 
 
     # ----- build the PDF -----
