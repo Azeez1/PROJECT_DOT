@@ -165,10 +165,7 @@ def _cached_summary_insights(summary_json: str) -> str:
         Top Violation Types:
         {format_violation_types(summary_data.get('by_type', {}))}
 
-        Focus on: overall trend, regional patterns, concerning violations, and positive developments.
-
-        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in ReportLab font tags like this: <font color="red">Missed Rest Break</font>
-        DO NOT use HTML span tags or style attributes."""
+        Focus on: overall trend, regional patterns, concerning violations, and positive developments."""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -251,14 +248,11 @@ def _cached_trend_insights(trend_json: str) -> str:
         2. Notable improvements or deteriorations
         3. Areas of concern that need attention
 
-        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in ReportLab font tags like this: <font color="red">Missed Rest Break</font>
-        DO NOT use HTML span tags or style attributes.
-
         Keep the response as a single, complete paragraph without line breaks."""
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
+            max_tokens=250,
             temperature=0.7,
         )
         insights = response.choices[0].message.content.strip()
