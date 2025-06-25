@@ -167,7 +167,8 @@ def _cached_summary_insights(summary_json: str) -> str:
 
         Focus on: overall trend, regional patterns, concerning violations, and positive developments.
 
-        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in HTML tags like this: <span style="color: red;">Missed Rest Break</span>"""
+        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in ReportLab font tags like this: <font color="red">Missed Rest Break</font>
+        DO NOT use HTML span tags or style attributes."""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -250,7 +251,8 @@ def _cached_trend_insights(trend_json: str) -> str:
         2. Notable improvements or deteriorations
         3. Areas of concern that need attention
 
-        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in HTML tags like this: <span style="color: red;">Missed Rest Break</span>
+        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in ReportLab font tags like this: <font color="red">Missed Rest Break</font>
+        DO NOT use HTML span tags or style attributes.
 
         Keep the response as a single, complete paragraph without line breaks."""
         response = client.chat.completions.create(
