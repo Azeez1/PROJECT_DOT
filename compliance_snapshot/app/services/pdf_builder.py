@@ -11,7 +11,8 @@ from reportlab.platypus import (
     Image,
 )
 from reportlab.lib.pagesizes import LETTER
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 from .report_generator import (
     generate_hos_violations_summary,
@@ -85,48 +86,98 @@ def build_pdf(
 
     # ----- build the PDF -----
     styles = getSampleStyleSheet()
-    # Use ``SimpleDocTemplate`` so we don't need to manage custom page
-    # templates for this straightforward document.
     doc = SimpleDocTemplate(str(out_path), pagesize=LETTER)
-    story = [Paragraph("HOS Violations Snapshot", styles["Heading1"])]
 
-    if include_table and table_data:
-        story.extend([Table(table_data, repeatRows=1, hAlign="LEFT"), Spacer(1, 12)])
+    # Create custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#000000'),
+        spaceAfter=20,
+        alignment=1  # Center alignment
+    )
 
-    story.extend([
-        Paragraph("HOS Violations Summary", styles["Heading2"]),
-        Paragraph(
-            f"Total Violations: {summary_data['total_current']} ({summary_data['total_change']:+})",
-            styles["Normal"],
-        ),
-    ])
+    section_title_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#000000'),
+        spaceAfter=12,
+        spaceBefore=20
+    )
 
+    normal_bold = ParagraphStyle(
+        'NormalBold',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=14,
+        spaceAfter=8,
+        fontName='Helvetica-Bold'
+    )
+
+    story = []
+
+    # Add both charts at the top of the page
+    story.append(Image(str(bar_path), width=270, height=180))
+    story.append(Spacer(1, 12))
+    story.append(Image(str(trend_path), width=270, height=180))
+    story.append(Spacer(1, 24))
+
+    # Add main title
+    story.append(Paragraph("DOT COMPLIANCE SNAPSHOT", title_style))
+    story.append(Spacer(1, 24))
+
+    # HOS Violations Summary section
+    story.append(Paragraph("<b>HOS Violations Summary:</b>", section_title_style))
+
+    # Create a two-column layout for the summary
+    summary_items = []
+
+    # Left column items
+    left_items = []
+    left_items.append(Paragraph(f"• <b>Total Violations:</b> {summary_data['total_current']} ({summary_data['total_change']:+})", styles['Normal']))
+
+    left_items.append(Paragraph("• <b>Violations by Region:</b>", styles['Normal']))
     for region, data in summary_data.get("by_region", {}).items():
-        story.append(
-            Paragraph(
-                f"{region}: {data['current']} ({data['change']:+})",
-                styles["Normal"],
-            )
-        )
+        sign = "+" if data['change'] >= 0 else ""
+        left_items.append(Paragraph(f"   ○ {region}: {data['current']} ({sign}{data['change']})", styles['Normal']))
 
-    story.append(Paragraph("Top Violation Types:", styles["Normal"]))
-    for vt, data in summary_data.get("by_type", {}).items():
-        story.append(
-            Paragraph(
-                f"{vt}: {data['current']} ({data['change']:+})",
-                styles["Normal"],
-            )
-        )
+    left_items.append(Paragraph("• <b>HOS Violations Week-over-Week Comparison:</b>", styles['Normal']))
+    left_items.append(Paragraph(f"   ○ Trend: {'increased' if summary_data['total_change'] > 0 else 'decreased' if summary_data['total_change'] < 0 else 'stable'}", styles['Normal']))
+    left_items.append(Paragraph(f"   (Previous Week: {summary_data['total_previous']} → This Week: {summary_data['total_current']})", styles['Normal']))
 
-    story.append(Image(str(bar_path), width=450, height=225))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(summary_insights, styles["Normal"]))
+    # Right column items
+    right_items = []
+    right_items.append(Paragraph("• <b>Top Violation Types:</b>", styles['Normal']))
+    for vt, data in list(summary_data.get("by_type", {}).items())[:5]:  # Top 5 violation types
+        sign = "+" if data['change'] >= 0 else ""
+        right_items.append(Paragraph(f"   ○ {vt}: {data['current']} ({sign}{data['change']})", styles['Normal']))
+
+    # Create table for two-column layout
+    from reportlab.platypus import TableStyle as RLTableStyle
+    summary_table_data = [[left_items, right_items]]
+    summary_table = Table(summary_table_data, colWidths=[doc.width * 0.5, doc.width * 0.5])
+    summary_table.setStyle(RLTableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 20))
+
+    # Summary Insights section
+    story.append(Paragraph("<b>Insights:</b>", normal_bold))
+    story.append(Paragraph(summary_insights, styles['Normal']))
+    story.append(Spacer(1, 30))
+
+    # HOS Violation Trend section
+    story.append(Paragraph("<b>HOS Violation Trend (4 weeks)</b>", section_title_style))
     story.append(Spacer(1, 12))
 
-    story.append(Paragraph("HOS Violation Trend (4 weeks)", styles["Heading2"]))
-    story.append(Image(str(trend_path), width=450, height=225))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(trend_insights, styles["Normal"]))
+    # Trend Insights
+    story.append(Paragraph("<b>Insights:</b>", normal_bold))
+    story.append(Paragraph(trend_insights, styles['Normal']))
 
     doc.build(story)
     return out_path
