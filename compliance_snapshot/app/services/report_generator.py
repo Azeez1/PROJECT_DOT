@@ -154,10 +154,10 @@ def _cached_summary_insights(summary_json: str) -> str:
             print("WARNING: No OpenAI API key found, using fallback")
             return generate_fallback_summary_insights(summary_data)
 
-        prompt = f"""
-        Analyze this HOS violations data and provide 2-3 sentences of insights:
+        prompt = f"""Analyze this HOS violations data and provide 2-3 sentences of insights:
 
         Total Violations: {summary_data['total_current']} ({summary_data['total_change']:+})
+        Previous Week: {summary_data['total_previous']} → This Week: {summary_data['total_current']}
 
         Regional Changes:
         {format_regional_data(summary_data.get('by_region', {}))}
@@ -166,10 +166,11 @@ def _cached_summary_insights(summary_json: str) -> str:
         {format_violation_types(summary_data.get('by_type', {}))}
 
         Focus on: overall trend, regional patterns, concerning violations, and positive developments.
-        """
+
+        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in HTML tags like this: <span style="color: red;">Missed Rest Break</span>"""
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=150,
             temperature=0.7,
@@ -238,22 +239,22 @@ def _cached_trend_insights(trend_json: str) -> str:
             print("WARNING: No OpenAI API key found, using fallback")
             return generate_fallback_trend_insights(trend_data)
 
-        prompt = f"""
-        Analyze this 4-week HOS violation trend and provide 3-4 sentences of insights:
+        trends_text = format_trend_data(trend_data)
 
-        Week-by-week data:
-        {format_trend_data(trend_data)}
+        prompt = f"""Analyze this 4-week HOS violation trend data and provide insights in a single paragraph:
 
-        Focus on:
-        1. Overall trajectory of each violation type
-        2. Which violations are improving vs worsening
-        3. Any concerning patterns or positive trends
-        4. Recommendations for areas needing attention
+        {trends_text}
 
-        Be specific about the data patterns and actionable in recommendations.
-        """
+        Provide a comprehensive analysis covering:
+        1. Key patterns and trends for each violation type
+        2. Notable improvements or deteriorations
+        3. Areas of concern that need attention
+
+        IMPORTANT: When mentioning "Missed Rest Break" violations in your response, wrap it in HTML tags like this: <span style="color: red;">Missed Rest Break</span>
+
+        Keep the response as a single, complete paragraph without line breaks."""
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0.7,
