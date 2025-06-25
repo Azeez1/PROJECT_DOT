@@ -11,6 +11,15 @@ VIOLATION_TYPES = [
     "Missed Rest Break",
 ]
 
+# Color map aligned with ``VIOLATION_TYPES``. ``Missed Rest Break`` is red
+VIOLATION_COLORS = {
+    "Missing Certifications": "#00D9FF",
+    "Shift Duty Limit": "#FF6B35",
+    "Shift Driving Limit": "#F7931E",
+    "Cycle Limit": "#39FF14",
+    "Missed Rest Break": "#FF0000",
+}
+
 
 def _drop_null_rows(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     """Return ``df`` with ``NaN`` or string "null" rows removed for ``columns``."""
@@ -138,11 +147,11 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
         ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
         ax.axis("off")
     else:
-        colors = ["#00D9FF", "#FF6B35", "#F7931E", "#39FF14"]
+        colors = [VIOLATION_COLORS.get(col, "#CCCCCC") for col in pivot.columns]
         pivot.plot.bar(
             stacked=True,
             ax=ax,
-            color=colors[: len(pivot.columns)],
+            color=colors,
             width=0.6,
         )
 
@@ -242,7 +251,7 @@ def make_trend_line(
             .reindex(target_dates, fill_value=0)
         )
 
-    colors = ["#00D9FF", "#FF6B35", "#F7931E", "#39FF14"]
+    colors = [VIOLATION_COLORS.get(col, "#CCCCCC") for col in pivot.columns]
     fig, ax = plt.subplots(figsize=(7, 4))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
@@ -256,7 +265,7 @@ def make_trend_line(
                 range(len(target_dates)),
                 pivot[col].values,
                 marker="o",
-                color=colors[idx % len(colors)],
+                color=VIOLATION_COLORS.get(col, colors[idx % len(colors)]),
                 label=col,
             )
         handles, labels = ax.get_legend_handles_labels()
