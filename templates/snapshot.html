@@ -62,7 +62,7 @@
 
     <div class="insights-box">
         <h3>Insights:</h3>
-        <p>{{ summary_insights }}</p>
+        <p>{{ summary_insights|safe }}</p>
     </div>
 
     <h2>HOS Violation Trend (4 weeks)</h2>
@@ -71,7 +71,7 @@
     </div>
     <div class="insights-box">
         <h3>Insights:</h3>
-        <p>{{ trend_insights }}</p>
+        <p>{{ trend_insights|safe }}</p>
     </div>
 </body>
 </html>
