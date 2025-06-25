@@ -9,6 +9,7 @@ from reportlab.platypus import (
     Table,
     Spacer,
     Image,
+    PageBreak,
 )
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -123,14 +124,15 @@ def build_pdf(
     story.append(Spacer(1, 20))
 
     # Add both charts at the top of the page
-    story.append(Image(str(bar_path), width=350, height=230))
+    story.append(Image(str(bar_path), width=450, height=300))
     story.append(Spacer(1, 12))
-    story.append(Image(str(trend_path), width=350, height=230))
-    story.append(Spacer(1, 24))
+    story.append(Image(str(trend_path), width=450, height=300))
 
-    # Add main title for the snapshot section
+    # Force page break to start Page 2
+    story.append(PageBreak())
+
+    # Add main title on Page 2
     story.append(Paragraph("DOT COMPLIANCE SNAPSHOT", title_style))
-    story.append(Spacer(1, 24))
 
     # HOS Violations Summary section
     story.append(Paragraph("<b>HOS Violations Summary:</b>", section_title_style))
