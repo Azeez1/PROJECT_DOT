@@ -118,13 +118,17 @@ def build_pdf(
 
     story = []
 
+    # Add main title at the very top
+    story.append(Paragraph("COMPLIANCE REPORT", title_style))
+    story.append(Spacer(1, 20))
+
     # Add both charts at the top of the page
-    story.append(Image(str(bar_path), width=270, height=180))
+    story.append(Image(str(bar_path), width=350, height=230))
     story.append(Spacer(1, 12))
-    story.append(Image(str(trend_path), width=270, height=180))
+    story.append(Image(str(trend_path), width=350, height=230))
     story.append(Spacer(1, 24))
 
-    # Add main title
+    # Add main title for the snapshot section
     story.append(Paragraph("DOT COMPLIANCE SNAPSHOT", title_style))
     story.append(Spacer(1, 24))
 
