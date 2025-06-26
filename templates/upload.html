@@ -352,13 +352,28 @@
             displayFiles();
         }
         
-        uploadForm.addEventListener('submit', function(e) {
-            if (selectedFiles.length === 0) {
-                e.preventDefault();
-                return;
-            }
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (selectedFiles.length === 0) return;
+
+            const formData = new FormData();
+            selectedFiles.forEach(f => formData.append('files', f));
+
             loading.style.display = 'block';
             uploadForm.style.display = 'none';
+
+            const resp = await fetch('/generate', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (resp.redirected) {
+                window.location.href = resp.url;
+            } else {
+                loading.style.display = 'none';
+                uploadForm.style.display = 'block';
+                alert('Upload failed');
+            }
         });
     </script>
 </body>
