@@ -107,6 +107,12 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+    /* Allow long option text to wrap inside dropdowns */
+    #filters select option {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
     
     #filters select:focus {
         outline: none;
