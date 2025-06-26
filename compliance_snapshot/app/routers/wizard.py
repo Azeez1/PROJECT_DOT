@@ -14,12 +14,8 @@ import json
 router = APIRouter()
 templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 _db = lambda t: Path(f"/tmp/{t}/snapshot.db")
-<<<<<< c2rk5i-codex/test-multi-file-upload-system
-_err = lambda t: Path(f"/tmp/{t}/errors.json")
-=======
 _summary = lambda t: Path(f"/tmp/{t}/summary.json")
->>>>>> main
-
+_err = lambda t: Path(f"/tmp/{t}/errors.json")
 @router.get("/wizard/{ticket}", response_class=HTMLResponse)
 async def wizard(request: Request, ticket: str):
     if not _db(ticket).exists():

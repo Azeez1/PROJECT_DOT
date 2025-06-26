@@ -65,41 +65,11 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
                 else:
                     df = pd.read_excel(file_path, engine="openpyxl")
             else:
-<<<<<< c2rk5i-codex/test-multi-file-upload-system
-                df = pd.read_excel(file_path, engine="openpyxl")
-            df.to_sql("hos", db, if_exists="replace", index=False)
-            logger.info("Single file mode: Saved %s as 'hos' table", file.filename)
-        except Exception as exc:
-            msg = f"{file.filename}: {exc}"
-            errors.append(msg)
-            logger.exception("Failed to process %s", file.filename)
-    else:
-        for file in saved_files:
-            file_path = folder / Path(file.filename).name
-            if not file_path.is_file():
-                logger.warning("File %s was not found after upload", file.filename)
-                continue
-            try:
-                report_type, df = file_detector.detect_report_type(file_path)
-            except Exception as exc:
-                msg = f"{file.filename}: {exc}"
-                errors.append(msg)
-                logger.exception("Type detection failed for %s", file.filename)
-                continue
-
-            table_name = report_type or "hos"
-            try:
-                df.to_sql(table_name, db, if_exists="replace", index=False)
-                logger.info("Saved %s as '%s' table", file.filename, table_name)
-            except Exception:
-                msg = f"{file.filename}: failed to write to table {table_name}"
-                errors.append(msg)
-                logger.exception("Failed to write %s to table %s", file.filename, table_name)
-=======
                 report_type, df = file_detector.detect_report_type(file_path)
         except Exception as exc:
             logger.exception("Failed to read %s", file.filename)
             record_failure(file.filename, exc)
+            errors.append(f"{file.filename}: {exc}")
             continue
 
         table_name = report_type or "hos"
@@ -110,6 +80,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
         except Exception as exc:
             logger.exception("Failed to write %s to table %s", file.filename, table_name)
             record_failure(file.filename, exc)
+            errors.append(f"{file.filename}: {exc}")
 
     summary = {
         "uploaded": len(saved_files),
@@ -121,7 +92,6 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
         json.dump(summary, fh)
 
     logger.info("Upload summary: %s", summary)
->>>>>> main
 
     db.close()
 
