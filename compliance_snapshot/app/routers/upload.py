@@ -5,6 +5,7 @@ from pathlib import Path
 import uuid
 
 from ..core.utils import save_uploads
+from ..services.processors import file_detector
 import sqlite3, pandas as pd
 
 router = APIRouter()
@@ -26,18 +27,46 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
     await save_uploads(folder, files)
 
-    sample_path = next((folder / Path(f.filename).name for f in files if f.filename), None)
-    if sample_path and sample_path.is_file():
-        try:
-            if sample_path.suffix.lower() == ".csv":
-                df = pd.read_csv(sample_path)
-            else:
-                df = pd.read_excel(sample_path, engine="openpyxl")
-            db = sqlite3.connect(folder / "snapshot.db")
-            df.to_sql("hos", db, if_exists="replace", index=False)
-            db.close()
-        except Exception as e:
-            print("SQLite write error:", e)
+    db = sqlite3.connect(folder / "snapshot.db")
+
+    saved_files = [f for f in files if f.filename]
+
+    if len(saved_files) == 1:
+        file = saved_files[0]
+        file_path = folder / Path(file.filename).name
+        if file_path.is_file():
+            try:
+                if file_path.suffix.lower() == ".csv":
+                    df = pd.read_csv(file_path)
+                else:
+                    df = pd.read_excel(file_path, engine="openpyxl")
+                df.to_sql("hos", db, if_exists="replace", index=False)
+                print(f"Single file mode: Saved {file.filename} as 'hos' table")
+            except Exception as e:
+                print("SQLite write error:", e)
+    else:
+        for file in saved_files:
+            file_path = folder / Path(file.filename).name
+            if not file_path.is_file():
+                continue
+            try:
+                report_type, df = file_detector.detect_report_type(file_path)
+                if report_type:
+                    df.to_sql(report_type, db, if_exists="replace", index=False)
+                    print(f"Multi-file mode: Saved {file.filename} as '{report_type}' table")
+            except Exception as e:
+                print(f"Error processing {file.filename}: {e}")
+                try:
+                    if file_path.suffix.lower() == ".csv":
+                        df = pd.read_csv(file_path)
+                    else:
+                        df = pd.read_excel(file_path, engine="openpyxl")
+                    df.to_sql("hos", db, if_exists="replace", index=False)
+                    print(f"Fallback: Saved {file.filename} as 'hos' table")
+                except Exception:
+                    print(f"Failed to process {file.filename}")
+
+    db.close()
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/wizard/{ticket}", status_code=303)

@@ -277,11 +277,26 @@ async function loadTabs(){
   const res = await fetch(`/api/${ticket}/tables`);
   const tables = await res.json();
   const nav = document.getElementById('tabs');
-  tables.forEach(name=>{
+
+  const tableNames = {
+    'hos': 'HOS Violations',
+    'safety_inbox': 'Safety Inbox',
+    'personnel_conveyance': 'Personal Conveyance',
+    'unassigned_hos': 'Unassigned HOS',
+    'mistdvi': 'Missed DVIR',
+    'driver_behaviors': 'Driver Behaviors',
+    'drivers_safety': 'Driver Safety'
+  };
+
+  tables.forEach((name, index) => {
     const btn = document.createElement('button');
     btn.type = "button";
-    btn.textContent = name.toUpperCase();
-    btn.onclick = ()=> openTab(name);
+    btn.textContent = tableNames[name] || name.toUpperCase();
+    btn.onclick = () => openTab(name);
+    if(index === 0){
+      btn.classList.add('active');
+      setTimeout(() => openTab(name), 100);
+    }
     nav.appendChild(btn);
   });
 }
@@ -292,6 +307,23 @@ async function openTab(table){
   const res = await fetch(`/api/${ticket}/query?table=${table}`);
   const {columns, rows} = await res.json();
   window.tableName = table;  // remember current table
+
+  const tableNames = {
+    'hos': 'HOS Violations',
+    'safety_inbox': 'Safety Inbox',
+    'personnel_conveyance': 'Personal Conveyance',
+    'unassigned_hos': 'Unassigned HOS',
+    'mistdvi': 'Missed DVIR',
+    'driver_behaviors': 'Driver Behaviors',
+    'drivers_safety': 'Driver Safety'
+  };
+
+  document.querySelectorAll('nav#tabs button').forEach(btn => {
+    btn.classList.remove('active');
+    if(btn.textContent === (tableNames[table] || table.toUpperCase())){
+      btn.classList.add('active');
+    }
+  });
 
   window.activeFilters = window.activeFilters || {};
   const filters = window.activeFilters;
