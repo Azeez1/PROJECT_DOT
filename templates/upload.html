@@ -158,6 +158,45 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(42, 82, 152, 0.3);
         }
+
+        .btn-secondary {
+            background: white;
+            color: #2a5298;
+            border: 2px solid #2a5298;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: #2a5298;
+            color: white;
+        }
+
+        .remove-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-btn:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
         
         .btn-primary:active {
             transform: translateY(0);
@@ -260,7 +299,13 @@
         });
         
         function handleFiles(files) {
-            selectedFiles = [...files];
+            const newFiles = Array.from(files);
+            newFiles.forEach(file => {
+                if (!selectedFiles.some(f => f.name === file.name)) {
+                    selectedFiles.push(file);
+                }
+            });
+            fileInput.value = '';
             displayFiles();
         }
         
@@ -276,8 +321,17 @@
             fileList.innerHTML = '';
             fileList.style.display = selectedFiles.length > 0 ? 'block' : 'none';
             submitBtn.style.display = selectedFiles.length > 0 ? 'block' : 'none';
-            
-            selectedFiles.forEach(file => {
+
+            if (selectedFiles.length > 0) {
+                const addMoreBtn = document.createElement('button');
+                addMoreBtn.type = 'button';
+                addMoreBtn.className = 'btn-secondary';
+                addMoreBtn.textContent = '+ Add More Files';
+                addMoreBtn.onclick = () => fileInput.click();
+                fileList.appendChild(addMoreBtn);
+            }
+
+            selectedFiles.forEach((file, index) => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item';
                 fileItem.innerHTML = `
@@ -287,9 +341,15 @@
                     </svg>
                     <span class="file-name">${file.name}</span>
                     <span class="file-size">${formatFileSize(file.size)}</span>
+                    <button type="button" class="remove-btn" onclick="removeFile(${index})">&times;</button>
                 `;
                 fileList.appendChild(fileItem);
             });
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            displayFiles();
         }
         
         uploadForm.addEventListener('submit', function(e) {
