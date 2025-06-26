@@ -186,6 +186,8 @@
     table.dataTable tbody td {
         padding: 0.75rem 1rem;
         border-bottom: 1px solid #f1f5f9;
+        white-space: normal;   /* allow long text to wrap */
+        word-break: break-word;
     }
     
     table.dataTable tbody tr:hover {
@@ -392,7 +394,9 @@ async function openTab(table){
   });
   const dt = $('#tbl').DataTable({
     lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'All']],
-    pageLength: 10
+    pageLength: 10,
+    autoWidth: false,
+    scrollX: true
   });
   currentDT = dt;                      // save reference for next tab change
   window.allRows = dt.rows().data().toArray();              // snapshot of full data
