@@ -1,6 +1,28 @@
+import logging
+import re
 import pandas as pd
 from pathlib import Path
 from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
+
+SAFETY_INBOX_COLUMNS = [
+    "Time",
+    "Vehicle",
+    "Driver",
+    "Driver Tags",
+    "Event Type",
+    "Status",
+    "Location",
+    "Event URL",
+    "Assigned Coach",
+    "Device Tags",
+    "Review Status",
+]
+
+def _norm(col: str) -> str:
+    """Normalize column name for comparison."""
+    return re.sub(r"[_\s]+", " ", col).strip().lower()
 
 
 def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
@@ -10,23 +32,30 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
     else:
         df = pd.read_excel(filepath, engine='openpyxl')
 
-    cols_lower = [c.lower().strip() for c in df.columns]
+    cols_norm = [_norm(c) for c in df.columns]
+    logger.debug("Found columns: %s", cols_norm)
+    expected_norm = {_norm(c) for c in SAFETY_INBOX_COLUMNS}
+    logger.debug("Expected Safety Inbox columns: %s", sorted(expected_norm))
+    missing = sorted(expected_norm - set(cols_norm))
+    logger.debug("Missing Safety Inbox columns: %s", missing)
 
-    if any('violation type' in col for col in cols_lower):
+    if any('violation type' in col for col in cols_norm):
         return 'hos', df
-    elif any('event type' in col for col in cols_lower) and any('driver' in col for col in cols_lower):
-        safety_cols = ['vehicle', 'status', 'review_status', 'event_url']
-        if any(any(s in col for col in cols_lower) for s in safety_cols):
+    elif expected_norm <= set(cols_norm):
+        return 'safety_inbox', df
+    elif any('event type' in col for col in cols_norm) and any('driver' in col for col in cols_norm):
+        safety_cols = ['vehicle', 'status', 'review status', 'event url']
+        if any(any(s in col for col in cols_norm) for s in safety_cols):
             return 'safety_inbox', df
-    elif any('personal conveyance' in col or 'pc_duration' in col for col in cols_lower):
+    elif any('personal conveyance' in col or 'pc_duration' in col for col in cols_norm):
         return 'personnel_conveyance', df
-    elif any('unassigned' in col and 'segments' in col for col in cols_lower):
+    elif any('unassigned' in col and 'segments' in col for col in cols_norm):
         return 'unassigned_hos', df
-    elif any('mistdvi' in col or 'missed dvir' in col for col in cols_lower):
+    elif any('mistdvi' in col or 'missed dvir' in col for col in cols_norm):
         return 'mistdvi', df
-    elif any('driver' in col and 'behavior' in col for col in cols_lower):
+    elif any('driver' in col and 'behavior' in col for col in cols_norm):
         return 'driver_behaviors', df
-    elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_lower):
+    elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_norm):
         return 'drivers_safety', df
 
     filename_lower = filepath.stem.lower()
