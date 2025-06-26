@@ -6,12 +6,14 @@ from fastapi.responses import (
 )
 from fastapi.templating import Jinja2Templates
 import sqlite3
+import json
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
 
 router = APIRouter()
 templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 _db = lambda t: Path(f"/tmp/{t}/snapshot.db")
+_err = lambda t: Path(f"/tmp/{t}/errors.json")
 
 @router.get("/wizard/{ticket}", response_class=HTMLResponse)
 async def wizard(request: Request, ticket: str):
@@ -19,6 +21,18 @@ async def wizard(request: Request, ticket: str):
         raise HTTPException(404, "ticket not found")
     return templates.TemplateResponse("wizard.html",
                                       {"request": request, "ticket": ticket})
+
+
+@router.get("/api/{ticket}/errors")
+async def list_errors(ticket: str):
+    path = _err(ticket)
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        data = []
+    return data
 
 @router.get("/api/{ticket}/tables")
 async def list_tables(ticket: str):

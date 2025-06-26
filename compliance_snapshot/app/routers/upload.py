@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import uuid
+import json
 
 from ..core.utils import save_uploads
 from ..services.processors import file_detector
@@ -33,6 +34,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
     await save_uploads(folder, files)
 
     db = sqlite3.connect(folder / "snapshot.db")
+    errors: list[str] = []
 
     saved_files = [f for f in files if f.filename]
     if not saved_files:
@@ -50,6 +52,8 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
             df.to_sql("hos", db, if_exists="replace", index=False)
             logger.info("Single file mode: Saved %s as 'hos' table", file.filename)
         except Exception as exc:
+            msg = f"{file.filename}: {exc}"
+            errors.append(msg)
             logger.exception("Failed to process %s", file.filename)
     else:
         for file in saved_files:
@@ -60,6 +64,8 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
             try:
                 report_type, df = file_detector.detect_report_type(file_path)
             except Exception as exc:
+                msg = f"{file.filename}: {exc}"
+                errors.append(msg)
                 logger.exception("Type detection failed for %s", file.filename)
                 continue
 
@@ -68,9 +74,15 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
                 df.to_sql(table_name, db, if_exists="replace", index=False)
                 logger.info("Saved %s as '%s' table", file.filename, table_name)
             except Exception:
+                msg = f"{file.filename}: failed to write to table {table_name}"
+                errors.append(msg)
                 logger.exception("Failed to write %s to table %s", file.filename, table_name)
 
     db.close()
+
+    # persist any errors so the wizard can display them
+    if errors:
+        (folder / "errors.json").write_text(json.dumps(errors))
 
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/wizard/{ticket}", status_code=303)

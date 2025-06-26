@@ -217,6 +217,8 @@
     <h2>Compliance Snapshot – Wizard</h2>
   </div>
 
+  <div id="error-area" style="max-width:1200px;margin:1rem auto;color:#b91c1c"></div>
+
   <!-- Tabs will be built by JS -->
   <nav id="tabs"></nav>
 
@@ -305,6 +307,15 @@ async function loadTabs(){
   }
 }
 loadTabs();
+loadErrors();
+
+async function loadErrors(){
+  const res = await fetch(`/api/${ticket}/errors`);
+  const errs = await res.json();
+  if(!errs.length) return;
+  const div = document.getElementById('error-area');
+  div.innerHTML = errs.map(e => `<p>${e}</p>`).join('');
+}
 
 // ---------- open tab, render table & chart ----------
 async function openTab(table){
