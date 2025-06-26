@@ -58,14 +58,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
             continue
 
         try:
-            if len(saved_files) == 1:
-                report_type = "hos"
-                if file_path.suffix.lower() == ".csv":
-                    df = pd.read_csv(file_path)
-                else:
-                    df = pd.read_excel(file_path, engine="openpyxl")
-            else:
-                report_type, df = file_detector.detect_report_type(file_path)
+            report_type, df = file_detector.detect_report_type(file_path)
         except Exception as exc:
             logger.exception("Failed to read %s", file.filename)
             record_failure(file.filename, exc)
