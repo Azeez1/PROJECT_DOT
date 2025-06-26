@@ -11,13 +11,15 @@ if (buildBtn) {
       filters: window.activeFilters,
       trend_end: document.getElementById('trend-end')?.value || null,
     };
+    const msg = document.getElementById('message');
+    msg.textContent = '';
     const res = await fetch(`/finalize/${wizId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      alert('Failed to build PDF');
+      msg.textContent = 'Failed to build PDF.';
       return;
     }
     const blob = await res.blob();

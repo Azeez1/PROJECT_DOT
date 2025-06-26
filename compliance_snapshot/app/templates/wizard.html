@@ -217,7 +217,25 @@
     <h2>Compliance Snapshot – Wizard</h2>
   </div>
 
+<<<<<< c2rk5i-codex/test-multi-file-upload-system
   <div id="error-area" style="max-width:1200px;margin:1rem auto;color:#b91c1c"></div>
+=======
+  <div id="summary" style="max-width:1200px;margin:1rem auto;padding:0 2rem;">
+    {% if summary %}
+      <p>{{ summary.processed }} of {{ summary.uploaded }} files processed.</p>
+      {% if summary.failed %}
+        <p>Failed files:</p>
+        <ul>
+          {% for name, reason in summary.failed.items() %}
+            <li>{{ name }} – {{ reason }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div id="message" style="max-width:1200px;margin:1rem auto;color:red;padding:0 2rem;"></div>
+>>>>>> main
 
   <!-- Tabs will be built by JS -->
   <nav id="tabs"></nav>
@@ -267,6 +285,9 @@ const TABLE_NAMES = {
   'drivers_safety': 'Driver Safety'
 };
 
+// keep reference to the active DataTable instance
+let currentDT = null;
+
 // restrict trend-end to Mondays
 const trendInput = document.getElementById('trend-end');
 if(trendInput){
@@ -287,8 +308,17 @@ if(trendInput){
 
 // ---------- build tab buttons ----------
 async function loadTabs(){
-  const res = await fetch(`/api/${ticket}/tables`);
-  const tables = await res.json();
+  const msg = document.getElementById('message');
+  msg.textContent = '';
+  let tables;
+  try{
+    const res = await fetch(`/api/${ticket}/tables`);
+    if(!res.ok) throw new Error('api');
+    tables = await res.json();
+  }catch(err){
+    msg.textContent = 'Unable to load data from server.';
+    return;
+  }
   const nav = document.getElementById('tabs');
 
   nav.innerHTML = '';
@@ -304,6 +334,8 @@ async function loadTabs(){
 
   if(tables.length){
     openTab(tables[0]);
+  }else{
+    msg.textContent = 'No tables found in uploaded files.';
   }
 }
 loadTabs();
@@ -319,15 +351,40 @@ async function loadErrors(){
 
 // ---------- open tab, render table & chart ----------
 async function openTab(table){
-  const res = await fetch(`/api/${ticket}/query?table=${table}`);
+<<<<<< codex/improve-error-handling-and-user-feedback-for-upload-process
+  const msg = document.getElementById('message');
+  msg.textContent = '';
+  let columns, rows;
+  try{
+    const res = await fetch(`/api/${ticket}/query?table=${table}`);
+    if(!res.ok) throw new Error('api');
+    ({columns, rows} = await res.json());
+  }catch(err){
+    msg.textContent = 'Failed to load table data.';
+    return;
+  }
+  if(!rows.length){
+    msg.textContent = 'This table contains no rows.';
+  }
+=======
+  // destroy previous table if present
+  if(currentDT){
+    currentDT.destroy();
+    document.getElementById('table-area').innerHTML = '';
+    currentDT = null;
+  }
+
+  const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
   const {columns, rows} = await res.json();
+>>>>>> main
   window.tableName = table;  // remember current table
 
   document.querySelectorAll('nav#tabs button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.table === table);
   });
 
-  window.activeFilters = window.activeFilters || {};
+  // reset filters for each table
+  window.activeFilters = {};
   const filters = window.activeFilters;
 
   // build HTML table
@@ -340,10 +397,11 @@ async function openTab(table){
   rows.forEach(r=>{
     tbody.insertRow().innerHTML = r.map(v=>`<td>${v}</td>`).join('');
   });
-  const dt      = $('#tbl').DataTable({
+  const dt = $('#tbl').DataTable({
     lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'All']],
     pageLength: 10
   });
+  currentDT = dt;                      // save reference for next tab change
   window.allRows = dt.rows().data().toArray();              // snapshot of full data
 
   function updatePreview(){

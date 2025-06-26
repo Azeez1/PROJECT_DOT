@@ -10,6 +10,7 @@ from ..services.processors import file_detector
 import sqlite3
 import pandas as pd
 import logging
+import json
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -41,13 +42,30 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
         db.close()
         raise HTTPException(status_code=400, detail="no files uploaded")
 
-    if len(saved_files) == 1:
-        file = saved_files[0]
+    successes: list[str] = []
+    failures: dict[str, str] = {}
+
+    def record_failure(fname: str, exc: Exception):
+        msg = str(exc)
+        failures[fname] = msg
+        logger.error("%s failed: %s", fname, msg)
+
+    for file in saved_files:
         file_path = folder / Path(file.filename).name
+        if not file_path.is_file():
+            failures[file.filename] = "file missing after upload"
+            logger.warning("File %s was not found after upload", file.filename)
+            continue
+
         try:
-            if file_path.suffix.lower() == ".csv":
-                df = pd.read_csv(file_path)
+            if len(saved_files) == 1:
+                report_type = "hos"
+                if file_path.suffix.lower() == ".csv":
+                    df = pd.read_csv(file_path)
+                else:
+                    df = pd.read_excel(file_path, engine="openpyxl")
             else:
+<<<<<< c2rk5i-codex/test-multi-file-upload-system
                 df = pd.read_excel(file_path, engine="openpyxl")
             df.to_sql("hos", db, if_exists="replace", index=False)
             logger.info("Single file mode: Saved %s as 'hos' table", file.filename)
@@ -77,6 +95,33 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
                 msg = f"{file.filename}: failed to write to table {table_name}"
                 errors.append(msg)
                 logger.exception("Failed to write %s to table %s", file.filename, table_name)
+=======
+                report_type, df = file_detector.detect_report_type(file_path)
+        except Exception as exc:
+            logger.exception("Failed to read %s", file.filename)
+            record_failure(file.filename, exc)
+            continue
+
+        table_name = report_type or "hos"
+        try:
+            df.to_sql(table_name, db, if_exists="replace", index=False)
+            logger.info("Saved %s as '%s' table", file.filename, table_name)
+            successes.append(file.filename)
+        except Exception as exc:
+            logger.exception("Failed to write %s to table %s", file.filename, table_name)
+            record_failure(file.filename, exc)
+
+    summary = {
+        "uploaded": len(saved_files),
+        "processed": len(successes),
+        "failed": failures,
+    }
+
+    with (folder / "summary.json").open("w") as fh:
+        json.dump(summary, fh)
+
+    logger.info("Upload summary: %s", summary)
+>>>>>> main
 
     db.close()
 

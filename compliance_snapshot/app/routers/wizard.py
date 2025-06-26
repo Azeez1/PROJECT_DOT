@@ -9,18 +9,32 @@ import sqlite3
 import json
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
+import json
 
 router = APIRouter()
 templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 _db = lambda t: Path(f"/tmp/{t}/snapshot.db")
+<<<<<< c2rk5i-codex/test-multi-file-upload-system
 _err = lambda t: Path(f"/tmp/{t}/errors.json")
+=======
+_summary = lambda t: Path(f"/tmp/{t}/summary.json")
+>>>>>> main
 
 @router.get("/wizard/{ticket}", response_class=HTMLResponse)
 async def wizard(request: Request, ticket: str):
     if not _db(ticket).exists():
         raise HTTPException(404, "ticket not found")
-    return templates.TemplateResponse("wizard.html",
-                                      {"request": request, "ticket": ticket})
+    summary = {}
+    sp = _summary(ticket)
+    if sp.exists():
+        try:
+            summary = json.loads(sp.read_text())
+        except Exception:
+            summary = {}
+    return templates.TemplateResponse(
+        "wizard.html",
+        {"request": request, "ticket": ticket, "summary": summary},
+    )
 
 
 @router.get("/api/{ticket}/errors")
@@ -36,9 +50,12 @@ async def list_errors(ticket: str):
 
 @router.get("/api/{ticket}/tables")
 async def list_tables(ticket: str):
-    con = sqlite3.connect(_db(ticket))
-    cur = con.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    return [r[0] for r in cur.fetchall()]
+    try:
+        con = sqlite3.connect(_db(ticket))
+        cur = con.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        return [r[0] for r in cur.fetchall()]
+    except Exception as exc:
+        raise HTTPException(500, f"database error: {exc}")
 
 @router.get("/api/{ticket}/query")
 async def query_table(ticket: str, table: str, limit: int | None = None):
@@ -49,13 +66,16 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
         table: Table name within the SQLite DB.
         limit: Optional row limit. If ``None`` all rows are returned.
     """
-    con = sqlite3.connect(_db(ticket))
-    cols = [c[1] for c in con.execute(f'PRAGMA table_info("{table}")')]
-    query = f'SELECT * FROM "{table}"'
-    if limit is not None:
-        query += f' LIMIT {int(limit)}'
-    rows = con.execute(query).fetchall()
-    return JSONResponse({"columns": cols, "rows": rows})
+    try:
+        con = sqlite3.connect(_db(ticket))
+        cols = [c[1] for c in con.execute(f'PRAGMA table_info("{table}")')]
+        query = f'SELECT * FROM "{table}"'
+        if limit is not None:
+            query += f' LIMIT {int(limit)}'
+        rows = con.execute(query).fetchall()
+        return JSONResponse({"columns": cols, "rows": rows})
+    except Exception as exc:
+        raise HTTPException(500, f"query failed: {exc}")
 
 
 @router.post("/finalize/{wiz_id}")
