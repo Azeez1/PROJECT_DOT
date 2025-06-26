@@ -6,7 +6,9 @@ import uuid
 
 from ..core.utils import save_uploads
 from ..services.processors import file_detector
-import sqlite3, pandas as pd
+import sqlite3
+import pandas as pd
+import logging
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -21,6 +23,9 @@ async def upload_form(request: Request):
 
 @router.post("/generate", tags=["generate"])
 async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
+    """Save uploaded files and create database tables for each."""
+
+    logger = logging.getLogger("upload")
     ticket = uuid.uuid4().hex
     folder = Path(f"/tmp/{ticket}")
     folder.mkdir(parents=True, exist_ok=True)
@@ -30,41 +35,40 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
     db = sqlite3.connect(folder / "snapshot.db")
 
     saved_files = [f for f in files if f.filename]
+    if not saved_files:
+        db.close()
+        raise HTTPException(status_code=400, detail="no files uploaded")
 
     if len(saved_files) == 1:
         file = saved_files[0]
         file_path = folder / Path(file.filename).name
-        if file_path.is_file():
-            try:
-                if file_path.suffix.lower() == ".csv":
-                    df = pd.read_csv(file_path)
-                else:
-                    df = pd.read_excel(file_path, engine="openpyxl")
-                df.to_sql("hos", db, if_exists="replace", index=False)
-                print(f"Single file mode: Saved {file.filename} as 'hos' table")
-            except Exception as e:
-                print("SQLite write error:", e)
+        try:
+            if file_path.suffix.lower() == ".csv":
+                df = pd.read_csv(file_path)
+            else:
+                df = pd.read_excel(file_path, engine="openpyxl")
+            df.to_sql("hos", db, if_exists="replace", index=False)
+            logger.info("Single file mode: Saved %s as 'hos' table", file.filename)
+        except Exception as exc:
+            logger.exception("Failed to process %s", file.filename)
     else:
         for file in saved_files:
             file_path = folder / Path(file.filename).name
             if not file_path.is_file():
+                logger.warning("File %s was not found after upload", file.filename)
                 continue
             try:
                 report_type, df = file_detector.detect_report_type(file_path)
-                if report_type:
-                    df.to_sql(report_type, db, if_exists="replace", index=False)
-                    print(f"Multi-file mode: Saved {file.filename} as '{report_type}' table")
-            except Exception as e:
-                print(f"Error processing {file.filename}: {e}")
-                try:
-                    if file_path.suffix.lower() == ".csv":
-                        df = pd.read_csv(file_path)
-                    else:
-                        df = pd.read_excel(file_path, engine="openpyxl")
-                    df.to_sql("hos", db, if_exists="replace", index=False)
-                    print(f"Fallback: Saved {file.filename} as 'hos' table")
-                except Exception:
-                    print(f"Failed to process {file.filename}")
+            except Exception as exc:
+                logger.exception("Type detection failed for %s", file.filename)
+                continue
+
+            table_name = report_type or "hos"
+            try:
+                df.to_sql(table_name, db, if_exists="replace", index=False)
+                logger.info("Saved %s as '%s' table", file.filename, table_name)
+            except Exception:
+                logger.exception("Failed to write %s to table %s", file.filename, table_name)
 
     db.close()
 
