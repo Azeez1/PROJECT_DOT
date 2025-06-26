@@ -6,6 +6,7 @@ from fastapi.responses import (
 )
 from fastapi.templating import Jinja2Templates
 import sqlite3
+import json
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
 import json
@@ -13,7 +14,11 @@ import json
 router = APIRouter()
 templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 _db = lambda t: Path(f"/tmp/{t}/snapshot.db")
+<<<<<< c2rk5i-codex/test-multi-file-upload-system
+_err = lambda t: Path(f"/tmp/{t}/errors.json")
+=======
 _summary = lambda t: Path(f"/tmp/{t}/summary.json")
+>>>>>> main
 
 @router.get("/wizard/{ticket}", response_class=HTMLResponse)
 async def wizard(request: Request, ticket: str):
@@ -30,6 +35,18 @@ async def wizard(request: Request, ticket: str):
         "wizard.html",
         {"request": request, "ticket": ticket, "summary": summary},
     )
+
+
+@router.get("/api/{ticket}/errors")
+async def list_errors(ticket: str):
+    path = _err(ticket)
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        data = []
+    return data
 
 @router.get("/api/{ticket}/tables")
 async def list_tables(ticket: str):

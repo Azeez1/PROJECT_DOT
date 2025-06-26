@@ -217,6 +217,9 @@
     <h2>Compliance Snapshot – Wizard</h2>
   </div>
 
+<<<<<< c2rk5i-codex/test-multi-file-upload-system
+  <div id="error-area" style="max-width:1200px;margin:1rem auto;color:#b91c1c"></div>
+=======
   <div id="summary" style="max-width:1200px;margin:1rem auto;padding:0 2rem;">
     {% if summary %}
       <p>{{ summary.processed }} of {{ summary.uploaded }} files processed.</p>
@@ -232,6 +235,7 @@
   </div>
 
   <div id="message" style="max-width:1200px;margin:1rem auto;color:red;padding:0 2rem;"></div>
+>>>>>> main
 
   <!-- Tabs will be built by JS -->
   <nav id="tabs"></nav>
@@ -335,6 +339,15 @@ async function loadTabs(){
   }
 }
 loadTabs();
+loadErrors();
+
+async function loadErrors(){
+  const res = await fetch(`/api/${ticket}/errors`);
+  const errs = await res.json();
+  if(!errs.length) return;
+  const div = document.getElementById('error-area');
+  div.innerHTML = errs.map(e => `<p>${e}</p>`).join('');
+}
 
 // ---------- open tab, render table & chart ----------
 async function openTab(table){
