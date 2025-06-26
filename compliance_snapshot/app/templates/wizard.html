@@ -265,6 +265,9 @@ const TABLE_NAMES = {
   'drivers_safety': 'Driver Safety'
 };
 
+// keep reference to the active DataTable instance
+let currentDT = null;
+
 // restrict trend-end to Mondays
 const trendInput = document.getElementById('trend-end');
 if(trendInput){
@@ -308,7 +311,14 @@ loadTabs();
 
 // ---------- open tab, render table & chart ----------
 async function openTab(table){
-  const res = await fetch(`/api/${ticket}/query?table=${table}`);
+  // destroy previous table if present
+  if(currentDT){
+    currentDT.destroy();
+    document.getElementById('table-area').innerHTML = '';
+    currentDT = null;
+  }
+
+  const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
   const {columns, rows} = await res.json();
   window.tableName = table;  // remember current table
 
@@ -316,7 +326,8 @@ async function openTab(table){
     btn.classList.toggle('active', btn.dataset.table === table);
   });
 
-  window.activeFilters = window.activeFilters || {};
+  // reset filters for each table
+  window.activeFilters = {};
   const filters = window.activeFilters;
 
   // build HTML table
@@ -329,10 +340,11 @@ async function openTab(table){
   rows.forEach(r=>{
     tbody.insertRow().innerHTML = r.map(v=>`<td>${v}</td>`).join('');
   });
-  const dt      = $('#tbl').DataTable({
+  const dt = $('#tbl').DataTable({
     lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'All']],
     pageLength: 10
   });
+  currentDT = dt;                      // save reference for next tab change
   window.allRows = dt.rows().data().toArray();              // snapshot of full data
 
   function updatePreview(){
