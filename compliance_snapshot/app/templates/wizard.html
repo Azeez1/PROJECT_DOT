@@ -254,6 +254,17 @@
 <script>
 const ticket = "{{ ticket }}";
 
+// Mapping of DB table names to display names
+const TABLE_NAMES = {
+  'hos': 'HOS Violations',
+  'safety_inbox': 'Safety Inbox',
+  'personnel_conveyance': 'Personal Conveyance',
+  'unassigned_hos': 'Unassigned HOS',
+  'mistdvi': 'Missed DVIR',
+  'driver_behaviors': 'Driver Behaviors',
+  'drivers_safety': 'Driver Safety'
+};
+
 // restrict trend-end to Mondays
 const trendInput = document.getElementById('trend-end');
 if(trendInput){
@@ -278,27 +289,20 @@ async function loadTabs(){
   const tables = await res.json();
   const nav = document.getElementById('tabs');
 
-  const tableNames = {
-    'hos': 'HOS Violations',
-    'safety_inbox': 'Safety Inbox',
-    'personnel_conveyance': 'Personal Conveyance',
-    'unassigned_hos': 'Unassigned HOS',
-    'mistdvi': 'Missed DVIR',
-    'driver_behaviors': 'Driver Behaviors',
-    'drivers_safety': 'Driver Safety'
-  };
+  nav.innerHTML = '';
 
   tables.forEach((name, index) => {
     const btn = document.createElement('button');
-    btn.type = "button";
-    btn.textContent = tableNames[name] || name.toUpperCase();
-    btn.onclick = () => openTab(name);
-    if(index === 0){
-      btn.classList.add('active');
-      setTimeout(() => openTab(name), 100);
-    }
+    btn.type = 'button';
+    btn.dataset.table = name;
+    btn.textContent = TABLE_NAMES[name] || name.replace(/_/g, ' ');
+    btn.addEventListener('click', () => openTab(name));
     nav.appendChild(btn);
   });
+
+  if(tables.length){
+    openTab(tables[0]);
+  }
 }
 loadTabs();
 
@@ -308,21 +312,8 @@ async function openTab(table){
   const {columns, rows} = await res.json();
   window.tableName = table;  // remember current table
 
-  const tableNames = {
-    'hos': 'HOS Violations',
-    'safety_inbox': 'Safety Inbox',
-    'personnel_conveyance': 'Personal Conveyance',
-    'unassigned_hos': 'Unassigned HOS',
-    'mistdvi': 'Missed DVIR',
-    'driver_behaviors': 'Driver Behaviors',
-    'drivers_safety': 'Driver Safety'
-  };
-
   document.querySelectorAll('nav#tabs button').forEach(btn => {
-    btn.classList.remove('active');
-    if(btn.textContent === (tableNames[table] || table.toUpperCase())){
-      btn.classList.add('active');
-    }
+    btn.classList.toggle('active', btn.dataset.table === table);
   });
 
   window.activeFilters = window.activeFilters || {};
@@ -359,7 +350,7 @@ async function openTab(table){
       const rows = searchStr ? table.rows({search:'applied'}).data().toArray()
                              : window.allRows;
       const cols = table.columns().header().toArray().map(th=>th.innerText);
-      drawChart('hos', rows, cols);
+      drawChart(TABLE_NAMES[window.tableName] || window.tableName, rows, cols);
   }
 
   $('#tbl').on('draw.dt', updatePreview);       // fires after search OR pagination
