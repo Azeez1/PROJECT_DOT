@@ -63,7 +63,10 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         # Still return unassigned_hos if we have strong indicators
         elif any('unassigned segments' in col or 'unassigned time' in col for col in cols_norm):
             return 'unassigned_hos', df
-    elif any('mistdvi' in col or 'missed dvir' in col for col in cols_norm):
+    elif any('mistdvi' in col or 'missed dvir' in col or 'dvir' in col for col in cols_norm):
+        return 'mistdvi', df
+    elif all(col in cols_norm for col in ['vehicle', 'driver', 'start time', 'end time', 'type']):
+        # If we have all these specific columns, it's likely a Missed DVIR report
         return 'mistdvi', df
     elif any('driver' in col and 'behavior' in col for col in cols_norm):
         return 'driver_behaviors', df
@@ -75,6 +78,8 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         return 'hos', df
     elif 'safety' in filename_lower and 'inbox' in filename_lower:
         return 'safety_inbox', df
+    elif 'mistdvi' in filename_lower or 'missed dvir' in filename_lower or ('dvir' in filename_lower and 'miss' in filename_lower):
+        return 'mistdvi', df
     # Fallback detection for Unassigned HOS based on filename
     if 'unassigned' in filename_lower and ('hos' in filename_lower or 'hours' in filename_lower):
         return 'unassigned_hos', df

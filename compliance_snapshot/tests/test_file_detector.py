@@ -66,3 +66,28 @@ def test_detect_unassigned_hos(tmp_path):
 
     report, _ = detect_report_type(path)
     assert report == 'unassigned_hos'
+
+
+def test_detect_mistdvi_by_cols(tmp_path):
+    cols = [
+        'Vehicle',
+        'Driver',
+        'Start Time',
+        'End Time',
+        'Type'
+    ]
+    df = pd.DataFrame([], columns=cols)
+    path = tmp_path / 'mistdvi.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'mistdvi'
+
+
+def test_detect_mistdvi_by_filename(tmp_path):
+    df = pd.DataFrame([], columns=['A', 'B'])
+    path = tmp_path / 'missed_dvir_report.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'mistdvi'
