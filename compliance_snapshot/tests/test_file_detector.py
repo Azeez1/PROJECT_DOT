@@ -28,3 +28,21 @@ def test_detect_safety_inbox(tmp_path):
 
     report, _ = detect_report_type(path)
     assert report == 'safety_inbox'
+
+
+def test_detect_personnel_conveyance(tmp_path):
+    cols = [
+        'Date',
+        'Driver Name',
+        'ELD Exempt',
+        'ELD Exempt Reason',
+        'Personal Conveyance (Duration)',
+        'Tags',
+        'Comments',
+    ]
+    df = pd.DataFrame([], columns=cols)
+    path = tmp_path / 'pc.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'personnel_conveyance'

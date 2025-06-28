@@ -47,7 +47,14 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         safety_cols = ['vehicle', 'status', 'review status', 'event url']
         if any(any(s in col for col in cols_norm) for s in safety_cols):
             return 'safety_inbox', df
-    elif any('personal conveyance' in col or 'pc_duration' in col for col in cols_norm):
+    elif any('personal conveyance' in col for col in cols_norm):
+        # Check for the duration column with parentheses
+        if any('personal conveyance (duration)' in col or 'personal conveyance duration' in col for col in cols_norm):
+            return 'personnel_conveyance', df
+        # Also check for driver name and date as additional validation
+        elif any('driver name' in col for col in cols_norm) and any('date' in col for col in cols_norm):
+            return 'personnel_conveyance', df
+    elif any('pc_duration' in col for col in cols_norm):
         return 'personnel_conveyance', df
     elif any('unassigned' in col and 'segments' in col for col in cols_norm):
         return 'unassigned_hos', df
