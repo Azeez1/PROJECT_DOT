@@ -39,8 +39,7 @@ def process_personnel_conveyance(df: pd.DataFrame) -> pd.DataFrame:
     # Convert timedelta objects to string format HH:MM:SS
     for col in df.columns:
         if df[col].dtype == 'timedelta64[ns]':
-            # Convert timedelta to string in HH:MM:SS format
-            df[col] = df[col].apply(lambda x: str(x).split(' ')[-1] if pd.notna(x) else '')
+            df[col] = df[col].apply(lambda x: str(x).split(' ')[-1].split('.')[0] if pd.notna(x) else '')
 
     # Also specifically check the duration column
     duration_col = None
@@ -49,8 +48,8 @@ def process_personnel_conveyance(df: pd.DataFrame) -> pd.DataFrame:
             duration_col = col
             break
 
-    if duration_col and df[duration_col].dtype == 'timedelta64[ns]':
-        df[duration_col] = df[duration_col].apply(lambda x: str(x).split(' ')[-1] if pd.notna(x) else '')
+    if duration_col:
+        df[duration_col] = df[duration_col].apply(lambda x: str(x).split(' ')[-1].split('.')[0] if pd.notna(x) else '')
 
     # Expected columns
     expected_cols = [
