@@ -69,6 +69,9 @@ def process_personnel_conveyance(df: pd.DataFrame) -> pd.DataFrame:
     # Parse duration to hours
     if 'personal_conveyance_duration' in df.columns:
         df['pc_hours'] = df['personal_conveyance_duration'].apply(parse_duration)
+        df['pc_hours'] = df['pc_hours'].apply(
+            lambda x: int(x) if pd.notna(x) and float(x).is_integer() else x
+        )
 
     # Clean string columns
     string_cols = ['driver_name', 'eld_exempt', 'eld_exempt_reason', 'tags', 'comments']
