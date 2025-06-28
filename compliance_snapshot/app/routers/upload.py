@@ -5,7 +5,7 @@ from pathlib import Path
 import uuid
 import json
 
-from ..core.utils import save_uploads
+from ..core.utils import save_uploads, sanitize_for_sql
 from ..services.processors import file_detector
 import sqlite3
 import pandas as pd
@@ -67,6 +67,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
         table_name = report_type or "hos"
         try:
+            sanitize_for_sql(df)
             df.to_sql(table_name, db, if_exists="replace", index=False)
             logger.info("Saved %s as '%s' table", file.filename, table_name)
             successes.append(file.filename)
