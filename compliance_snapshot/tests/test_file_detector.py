@@ -46,3 +46,23 @@ def test_detect_personnel_conveyance(tmp_path):
 
     report, _ = detect_report_type(path)
     assert report == 'personnel_conveyance'
+
+
+def test_detect_unassigned_hos(tmp_path):
+    cols = [
+        'DATE',
+        'Vehicle',
+        'Unassigned Time',
+        'Unassigned Distance',
+        'Unassigned Segments',
+        'Pending Segments',
+        'Annotated Segments',
+        'Tags',
+        'Owner of the Time'
+    ]
+    df = pd.DataFrame([], columns=cols)
+    path = tmp_path / 'unassigned.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'unassigned_hos'

@@ -56,8 +56,13 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
             return 'personnel_conveyance', df
     elif any('pc_duration' in col for col in cols_norm):
         return 'personnel_conveyance', df
-    elif any('unassigned' in col and 'segments' in col for col in cols_norm):
-        return 'unassigned_hos', df
+    elif any('unassigned' in col and ('time' in col or 'segments' in col) for col in cols_norm):
+        # Additional check for vehicle column
+        if any('vehicle' in col for col in cols_norm):
+            return 'unassigned_hos', df
+        # Still return unassigned_hos if we have strong indicators
+        elif any('unassigned segments' in col or 'unassigned time' in col for col in cols_norm):
+            return 'unassigned_hos', df
     elif any('mistdvi' in col or 'missed dvir' in col for col in cols_norm):
         return 'mistdvi', df
     elif any('driver' in col and 'behavior' in col for col in cols_norm):
@@ -70,5 +75,8 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         return 'hos', df
     elif 'safety' in filename_lower and 'inbox' in filename_lower:
         return 'safety_inbox', df
+    # Fallback detection for Unassigned HOS based on filename
+    if 'unassigned' in filename_lower and ('hos' in filename_lower or 'hours' in filename_lower):
+        return 'unassigned_hos', df
 
     return 'hos', df
