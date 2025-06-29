@@ -223,6 +223,22 @@
         font-style: italic;
         margin-left: 0.5rem;
     }
+
+    .column-vis-btn {
+        background: #2a5298;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .column-vis-btn:hover {
+        background: #1e3c72;
+    }
   </style>
 </head><body>
   <div class="wizard-header">
@@ -406,8 +422,49 @@ async function openTab(table){
     lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'All']],
     pageLength: 10,
     autoWidth: false,
-    scrollX: true
+    scrollX: true,  // Enable horizontal scrolling
+    scrollCollapse: true,
+    columnDefs: columns.length > 15 ? [
+        { targets: Array.from({length: columns.length}, (_, i) => i).slice(10), visible: false }
+    ] : []
   });
+  const filtersDiv = document.getElementById('filters');
+
+  // After creating the DataTable, add column visibility button if many columns
+  if(columns.length > 10) {
+    const visBtn = document.createElement('button');
+    visBtn.className = 'column-vis-btn';
+    visBtn.textContent = 'Show/Hide Columns';
+    visBtn.onclick = () => {
+        const dropdown = document.getElementById('column-dropdown');
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    };
+
+    const dropdown = document.createElement('div');
+    dropdown.id = 'column-dropdown';
+    dropdown.style.cssText = 'display:none;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;margin-bottom:1rem;max-height:300px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+
+    columns.forEach((col, idx) => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block;margin:0.25rem 0;cursor:pointer;';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.style.marginRight = '0.5rem';
+        checkbox.onchange = () => {
+            const column = dt.column(idx);
+            column.visible(checkbox.checked);
+        };
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(col));
+        dropdown.appendChild(label);
+    });
+
+    filtersDiv.parentNode.insertBefore(visBtn, filtersDiv);
+    filtersDiv.parentNode.insertBefore(dropdown, filtersDiv);
+  }
   currentDT = dt;                      // save reference for next tab change
   window.allRows = dt.rows().data().toArray();              // snapshot of full data
 
@@ -437,7 +494,6 @@ async function openTab(table){
   updatePreview();
 
   // build column filters
-  const filtersDiv = document.getElementById('filters');
   filtersDiv.innerHTML = '';
   columns.forEach((col, i) => {
     const unique = [...new Set(rows.map(r => r[i]))]
