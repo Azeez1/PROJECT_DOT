@@ -26,12 +26,14 @@ from .report_generator import (
     generate_pc_usage_insights,
     generate_unassigned_driving_summary,
     generate_unassigned_driving_insights,
+    generate_unassigned_segment_details,
 )
 
 from .visualizations.chart_factory import (
     make_stacked_bar,
     make_trend_line,
     make_unassigned_bar_chart,
+    make_pc_usage_bar_chart,
 )
 
 import re
@@ -286,6 +288,16 @@ def build_pdf(
             ]))
             story.append(pc_table)
             story.append(Spacer(1, 12))
+
+            pc_bar_path = make_pc_usage_bar_chart(pc_df, tmpdir / "pc_bar.png")
+            story.append(Spacer(1, 20))
+            story.append(Image(str(pc_bar_path), width=400, height=250))
+
+            story.append(Spacer(1, 20))
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            pc_insights = generate_pc_usage_insights(pc_data)
+            pc_insights = convert_html_to_reportlab(pc_insights)
+            story.append(Paragraph(pc_insights, styles['Normal']))
     except Exception as e:
         print(f"Error loading Personal Conveyance data: {e}")
 
@@ -294,22 +306,30 @@ def build_pdf(
         unassigned_df = load_data(wiz_id, "unassigned_hos")
         if not unassigned_df.empty:
             story.append(Spacer(1, 30))
-            story.append(Paragraph("Unassigned Driving Segments", section_title_style))
 
             unassigned_data = generate_unassigned_driving_summary(
                 unassigned_df, end_date or pd.Timestamp.utcnow().date()
             )
 
-            chart_path = make_unassigned_bar_chart(
+            unassigned_bar_path = make_unassigned_bar_chart(
                 unassigned_df, tmpdir / "unassigned_bar.png"
             )
-            story.append(Image(str(chart_path), width=350, height=230))
-            story.append(Spacer(1, 12))
+            story.append(Image(str(unassigned_bar_path), width=450, height=300))
 
+            story.append(Spacer(1, 20))
             story.append(Paragraph("<b>Insights:</b>", normal_bold))
-            unassigned_insights = generate_unassigned_driving_insights(unassigned_data)
-            unassigned_insights = convert_html_to_reportlab(unassigned_insights)
-            story.append(Paragraph(unassigned_insights, styles['Normal']))
+            first_insights = generate_unassigned_driving_insights(unassigned_data)
+            first_insights = convert_html_to_reportlab(first_insights)
+            story.append(Paragraph(first_insights, styles['Normal']))
+
+            story.append(Spacer(1, 30))
+            story.append(Paragraph("<b>Unassigned Driving Segments</b>", section_title_style))
+
+            story.append(Spacer(1, 12))
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            second_insights = generate_unassigned_segment_details(unassigned_data)
+            second_insights = convert_html_to_reportlab(second_insights)
+            story.append(Paragraph(second_insights, styles['Normal']))
     except Exception as e:
         print(f"Error loading Unassigned HOS data: {e}")
 

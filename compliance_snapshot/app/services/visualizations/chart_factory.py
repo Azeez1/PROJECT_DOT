@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import math
 from pathlib import Path
 import pandas as pd
+from typing import Dict
 
 VIOLATION_TYPES = [
     "Missing Certifications",
@@ -233,6 +234,73 @@ def make_unassigned_bar_chart(df: pd.DataFrame, out_path: Path) -> Path:
     plt.tight_layout()
     plt.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="#CCCCCC")
     plt.close()
+    return out_path
+
+
+def make_pc_usage_bar_chart(df: pd.DataFrame, out_path: Path) -> Path:
+    """Create bar chart showing PC usage hours by region."""
+    plt.style.use('default')
+
+    region_lookup = {
+        "great lakes": "GREAT LAKES",
+        "ohio valley": "OHIO VALLEY",
+        "southeast": "SOUTHEAST",
+        "midwest": "MIDWEST",
+        "gl": "GREAT LAKES",
+        "ov": "OHIO VALLEY",
+        "se": "SOUTHEAST",
+        "mw": "MIDWEST",
+        "corporate": "CORPORATE",
+    }
+
+    tags_col = None
+    duration_col = None
+    for col in df.columns:
+        col_lower = col.lower()
+        if 'tag' in col_lower or 'region' in col_lower:
+            tags_col = col
+        if 'personal conveyance' in col_lower or 'duration' in col_lower:
+            duration_col = col
+
+    regional_data: Dict[str, float] = {}
+
+    if tags_col and duration_col:
+        for region_key, region_name in region_lookup.items():
+            mask = df[tags_col].astype(str).str.lower().str.contains(region_key, na=False)
+            if mask.any():
+                total_seconds = 0
+                for duration_str in df.loc[mask, duration_col]:
+                    if pd.notna(duration_str) and ':' in str(duration_str):
+                        parts = str(duration_str).split(':')
+                        if len(parts) == 3:
+                            h, m, s = map(int, parts)
+                            total_seconds += h * 3600 + m * 60 + s
+
+                hours = total_seconds / 3600
+                regional_data[region_name] = hours
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    if regional_data:
+        regions = list(regional_data.keys())
+        hours = list(regional_data.values())
+        bars = ax.bar(regions, hours, color='#5B9BD5', width=0.6)
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width() / 2., height,
+                    f'{height:.1f}h', ha='center', va='bottom')
+
+        ax.set_title('PC Usage by Region', fontsize=14, pad=20)
+        ax.set_ylabel('Hours', fontsize=10)
+        ax.set_ylim(0, max(hours) * 1.2 if hours else 1)
+    else:
+        ax.text(0.5, 0.5, 'No regional data available', ha='center', va='center')
+
+    ax.grid(True, axis='y', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200, bbox_inches='tight')
+    plt.close()
+
     return out_path
 
 
