@@ -518,45 +518,53 @@ def generate_pc_usage_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
 
 
 def generate_pc_usage_insights(summary_data: Dict) -> str:
-    """Generate insights for PC usage patterns using OpenAI with fallback."""
+    """Generate insights for Personal Conveyance usage."""
+    total_time = summary_data.get('total_pc_time', '0:00:00')
+    drivers_list = summary_data.get('drivers_list', [])
+    exceeded_count = summary_data.get('exceeded_daily_limit_count', 0)
+
     try:
         if not os.environ.get("OPEN_API_KEY"):
-            return generate_fallback_pc_usage_insights(summary_data)
+            return generate_fallback_pc_insights(summary_data)
 
-        driver_lines = "\n".join(
-            [f"   • {d['driver']}: {d['hours']:.2f} hrs" for d in summary_data.get("drivers_list", [])[:10]]
-        )
+        driver_text = "\n".join([f"- {driver}: {duration}" for driver, duration in drivers_list[:5]])
 
-        prompt = f"""Analyze this Personal Conveyance usage data in 2-3 sentences:
+        prompt = f"""Analyze this Personal Conveyance usage data and provide insights in 2-3 sentences:
 
-        Total PC Time: {summary_data['total_pc_time']:.2f} hours
-        Drivers Exceeding Daily/Weekly Limit: {summary_data['exceeded_daily_limit_count']}
+        Total PC Time: {total_time}
+        Drivers exceeding 3 hours/day: {exceeded_count}
 
-        Driver Totals:\n{driver_lines}
+        Top PC Users:
+        {driver_text}
 
-        Focus on compliance with the 2 hour/day and 14 hour/week limits."""
+        Focus on: compliance with 2hr/day and 14hr/week limits, patterns of excessive use, and recommendations."""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=150,
+            max_tokens=200,
             temperature=0.7,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"ERROR in generate_pc_usage_insights: {e}")
-        return generate_fallback_pc_usage_insights(summary_data)
+        return generate_fallback_pc_insights(summary_data)
 
 
-def generate_fallback_pc_usage_insights(summary_data: Dict) -> str:
-    total = summary_data.get("total_pc_time", 0)
-    exceed = summary_data.get("exceeded_daily_limit_count", 0)
-    if exceed:
-        return (
-            f"Drivers exceeded PC limits on {exceed} occasions with a total of {total:.2f} hours used. "
-            "Review PC policies with the drivers involved."
-        )
-    return f"Total PC usage was {total:.2f} hours with no limit violations detected."
+def generate_fallback_pc_insights(summary_data: Dict) -> str:
+    """Fallback PC insights when OpenAI is unavailable."""
+    drivers_list = summary_data.get('drivers_list', [])
+    exceeded_count = summary_data.get('exceeded_daily_limit_count', 0)
+
+    insights = f"A total of {exceeded_count} drivers exceeded the recommended 3 hours of Personal Conveyance in a single day. "
+
+    if drivers_list:
+        top_driver = drivers_list[0]
+        insights += f"The highest usage was by {top_driver[0]} with {top_driver[1]} hours. "
+
+    insights += "Continued monitoring is recommended to ensure compliance with the 2 hour/day and 14 hour/week PC limits to avoid potential HOS violations."
+
+    return insights
 
 
 def sum_pc_durations(durations):
@@ -726,3 +734,46 @@ def generate_fallback_unassigned_driving_insights(summary_data: Dict) -> str:
         f"Unassigned driving segments {trend} to {summary_data.get('total_segments', 0)}. "
         f"Top contributors include {names}. Consider reinforcing login procedures."
     )
+
+
+def generate_unassigned_segment_details(summary_data: Dict) -> str:
+    """Generate detailed insights about specific vehicles and drivers."""
+    total = summary_data.get('total_segments', 0)
+    contributors = summary_data.get('top_contributors', [])
+
+    if total == 0:
+        return "No unassigned driving segments were recorded this week."
+
+    insights = f"A total of {total} unassigned driving segments were recorded this week, "
+
+    vehicle_data: Dict[str, list] = {}
+    for contrib in contributors:
+        vehicle = contrib['vehicle']
+        if vehicle not in vehicle_data:
+            vehicle_data[vehicle] = []
+        vehicle_data[vehicle].append(contrib)
+
+    insights += f"all attributable to {len(vehicle_data)} units. "
+
+    vehicle_details = []
+    for vehicle, contribs in vehicle_data.items():
+        total_segments = sum(c['segments'] for c in contribs)
+        driver = contribs[0]['driver']
+        region = contribs[0]['region']
+
+        detail = f"<b>{vehicle} ({region})</b> accounted for {total_segments} of the {total} segments, "
+        detail += f"all linked to <b>{driver}</b>"
+        vehicle_details.append(detail)
+
+    if vehicle_details:
+        insights += vehicle_details[0]
+        insights += ", indicating a likely oversight in logging into the ELD. "
+
+        if len(vehicle_details) > 1:
+            for detail in vehicle_details[1:]:
+                insights += f"The remaining segments came from {detail}. "
+
+    insights += "These findings suggest localized compliance lapses rather than systemic issues, "
+    insights += "and reinforce the need for login adherence, especially for frequently used or reassigned vehicles."
+
+    return insights
