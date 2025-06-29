@@ -70,16 +70,25 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         return 'mistdvi', df
     elif any('driver' in col and 'behavior' in col for col in cols_norm):
         return 'driver_behaviors', df
+    elif any('safety score' in col for col in cols_norm) and any('driver name' in col for col in cols_norm):
+        # If we have safety score and driver name, it's likely a safety behavior report
+        return 'driver_behaviors', df
+    elif any('harsh turn' in col for col in cols_norm) or any('speeding time' in col for col in cols_norm):
+        # Additional indicators for safety behavior report
+        if any('driver' in col for col in cols_norm):
+            return 'driver_behaviors', df
     elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_norm):
         return 'drivers_safety', df
 
-    filename_lower = filepath.stem.lower()
+    filename_lower = filepath.stem.lower().replace('_', ' ')
     if 'hos' in filename_lower and 'violation' in filename_lower:
         return 'hos', df
     elif 'safety' in filename_lower and 'inbox' in filename_lower:
         return 'safety_inbox', df
     elif 'mistdvi' in filename_lower or 'missed dvir' in filename_lower or ('dvir' in filename_lower and 'miss' in filename_lower):
         return 'mistdvi', df
+    elif 'safety behavior' in filename_lower or 'driver behavior' in filename_lower:
+        return 'driver_behaviors', df
     # Fallback detection for Unassigned HOS based on filename
     if 'unassigned' in filename_lower and ('hos' in filename_lower or 'hours' in filename_lower):
         return 'unassigned_hos', df

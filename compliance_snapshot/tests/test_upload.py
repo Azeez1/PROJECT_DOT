@@ -35,7 +35,7 @@ def test_upload_safety_inbox(tmp_path):
         resp = client.post(
             "/generate",
             files={"files": ("safety_inbox.csv", fh, "text/csv")},
-            allow_redirects=False,
+            follow_redirects=False,
         )
     assert resp.status_code == 303
     loc = resp.headers["location"]
