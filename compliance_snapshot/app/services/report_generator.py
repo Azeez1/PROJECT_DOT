@@ -478,10 +478,10 @@ def generate_pc_usage_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
 
     # Aggregate durations per driver
     if date_col and len(df) > 0:
-        aggregated = df.groupby(driver_col).apply(
-            lambda group: sum_pc_durations(group[duration_col])
-        ).reset_index()
-        aggregated.columns = [driver_col, "total_duration"]
+        # Group by driver and aggregate durations manually
+        driver_groups = df.groupby(driver_col)[duration_col].apply(list).reset_index()
+        driver_groups['total_duration'] = driver_groups[duration_col].apply(sum_pc_durations)
+        aggregated = driver_groups[[driver_col, 'total_duration']]
     else:
         aggregated = df[[driver_col, duration_col]].copy()
         aggregated["total_duration"] = aggregated[duration_col].apply(lambda d: sum_pc_durations([d]))
@@ -581,13 +581,36 @@ def sum_pc_durations(durations):
 
 def generate_unassigned_driving_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
     """Process unassigned driving data dynamically."""
+    # Debug: show available columns for troubleshooting various formats
+    print(f"DEBUG Unassigned HOS columns: {list(df.columns)}")
+
     cols = _standardize_columns(df)
 
-    vehicle_col = cols.get("vehicle") or cols.get("vehicle_id")
-    driver_col = cols.get("driver") or cols.get("driver_name") or cols.get("owner_of_the_time")
-    segments_col = cols.get("unassigned_segments") or cols.get("segments")
-    time_col = cols.get("unassigned_time") or cols.get("duration")
-    tags_col = cols.get("tags") or cols.get("driver_tags")
+    # Use flexible matching to locate relevant columns
+    vehicle_col = None
+    driver_col = None
+    segments_col = None
+    time_col = None
+    tags_col = None
+
+    for col in df.columns:
+        col_lower = col.lower()
+        if "vehicle" in col_lower:
+            vehicle_col = col
+        if "driver" in col_lower or "owner" in col_lower:
+            driver_col = col
+        if "segment" in col_lower and "unassigned" in col_lower:
+            segments_col = col
+        if "time" in col_lower and "unassigned" in col_lower:
+            time_col = col
+        if "tag" in col_lower:
+            tags_col = col
+
+    # Ensure we have at least time or segment data
+    if not time_col and not segments_col:
+        raise ValueError(
+            f"Cannot find unassigned time or segments columns. Available: {list(df.columns)}"
+        )
 
     if "date" in cols:
         df = df.copy()
@@ -620,24 +643,33 @@ def generate_unassigned_driving_summary(df: pd.DataFrame, trend_end_date: date) 
             mask = current_week[tags_col].str.lower().str.contains(region_key, na=False)
             if mask.any():
                 region_df = current_week[mask]
+
+                # Calculate time for this region
                 if time_col:
                     total_seconds = 0
                     for time_str in region_df[time_col]:
-                        if pd.notna(time_str) and ":" in str(time_str):
-                            parts = str(time_str).split(":")
+                        if pd.notna(time_str) and ':' in str(time_str):
+                            parts = str(time_str).split(':')
                             if len(parts) == 3:
-                                h, m, s = map(int, parts)
-                                total_seconds += h * 3600 + m * 60 + s
+                                try:
+                                    h = int(parts[0])
+                                    m = int(parts[1])
+                                    # Support decimal seconds
+                                    s = float(parts[2])
+                                    total_seconds += h * 3600 + m * 60 + s
+                                except ValueError as e:
+                                    print(f"Error parsing time '{time_str}': {e}")
+                                    continue
 
-                    hours = total_seconds // 3600
-                    minutes = (total_seconds % 3600) // 60
-                    seconds = total_seconds % 60
+                    hours = int(total_seconds // 3600)
+                    minutes = int((total_seconds % 3600) // 60)
+                    seconds = int(total_seconds % 60)
                     time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
                     region_data[region_name] = {
-                        "time_str": time_str,
-                        "total_seconds": total_seconds,
-                        "segments": int(region_df[segments_col].sum()) if segments_col else len(region_df),
+                        'time_str': time_str,
+                        'total_seconds': total_seconds,
+                        'segments': int(region_df[segments_col].sum()) if segments_col else len(region_df)
                     }
 
     top_contributors = []
