@@ -445,3 +445,209 @@ def generate_fallback_safety_inbox_insights(summary_data: Dict) -> str:
 
     return insights
 
+
+def generate_pc_usage_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
+    """Return summary statistics for Personal Conveyance usage."""
+    cols = _standardize_columns(df)
+    driver_col = cols.get("driver_name") or cols.get("driver")
+    date_col = cols.get("date")
+    pc_col = cols.get("pc_hours") or cols.get("personal_conveyance_duration")
+
+    if not driver_col or not pc_col:
+        raise ValueError("Driver name and PC duration columns are required")
+
+    df2 = df.copy()
+    df2[pc_col] = pd.to_numeric(df2[pc_col], errors="coerce").fillna(0.0)
+
+    total_pc_time = float(df2[pc_col].sum())
+
+    exceeded_daily_limit_count = 0
+    drivers_with_3hrs = []
+
+    if date_col:
+        df2["date"] = pd.to_datetime(df2[date_col], errors="coerce")
+        daily = df2.groupby([driver_col, df2["date"].dt.date])[pc_col].sum()
+        exceeded_daily_limit_count = int((daily > 2).sum())
+        over_three = daily.groupby(level=0).max()
+        drivers_with_3hrs = [d for d, h in over_three.items() if h >= 3]
+    else:
+        totals = df2.groupby(driver_col)[pc_col].sum()
+        drivers_with_3hrs = [d for d, h in totals.items() if h >= 3]
+
+    totals = df2.groupby(driver_col)[pc_col].sum()
+    drivers_list = [
+        {"driver": drv, "hours": float(hours)}
+        for drv, hours in totals.items()
+        if drv in drivers_with_3hrs
+    ]
+
+    return {
+        "total_pc_time": total_pc_time,
+        "drivers_list": drivers_list,
+        "exceeded_daily_limit_count": exceeded_daily_limit_count,
+    }
+
+
+def generate_pc_usage_insights(summary_data: Dict) -> str:
+    """Generate insights for PC usage patterns using OpenAI with fallback."""
+    try:
+        if not os.environ.get("OPEN_API_KEY"):
+            return generate_fallback_pc_usage_insights(summary_data)
+
+        driver_lines = "\n".join(
+            [f"   • {d['driver']}: {d['hours']:.2f} hrs" for d in summary_data.get("drivers_list", [])[:10]]
+        )
+
+        prompt = f"""Analyze this Personal Conveyance usage data in 2-3 sentences:
+
+        Total PC Time: {summary_data['total_pc_time']:.2f} hours
+        Drivers Exceeding Daily/Weekly Limit: {summary_data['exceeded_daily_limit_count']}
+
+        Driver Totals:\n{driver_lines}
+
+        Focus on compliance with the 2 hour/day and 14 hour/week limits."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"ERROR in generate_pc_usage_insights: {e}")
+        return generate_fallback_pc_usage_insights(summary_data)
+
+
+def generate_fallback_pc_usage_insights(summary_data: Dict) -> str:
+    total = summary_data.get("total_pc_time", 0)
+    exceed = summary_data.get("exceeded_daily_limit_count", 0)
+    if exceed:
+        return (
+            f"Drivers exceeded PC limits on {exceed} occasions with a total of {total:.2f} hours used. "
+            "Review PC policies with the drivers involved."
+        )
+    return f"Total PC usage was {total:.2f} hours with no limit violations detected."
+
+
+def generate_unassigned_driving_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
+    """Return summary statistics for Unassigned Driving segments."""
+    cols = _standardize_columns(df)
+    date_col = cols.get("date")
+    region_col = cols.get("tags")
+    seg_col = cols.get("unassigned_segments")
+    time_col = cols.get("unassigned_hours")
+    driver_col = cols.get("owner_of_the_time") or cols.get("driver_name") or cols.get("driver")
+    vehicle_col = cols.get("vehicle")
+
+    df2 = df.copy()
+    if seg_col:
+        df2[seg_col] = pd.to_numeric(df2[seg_col], errors="coerce").fillna(0)
+    if time_col:
+        df2[time_col] = pd.to_numeric(df2[time_col], errors="coerce").fillna(0.0)
+
+    if date_col:
+        df2["date"] = pd.to_datetime(df2[date_col], errors="coerce")
+        current_start = pd.Timestamp(_monday_of(trend_end_date))
+        prev_start = current_start - pd.Timedelta(weeks=1)
+        current = df2[(df2["date"] >= current_start) & (df2["date"] <= current_start + pd.Timedelta(days=6))]
+        previous = df2[(df2["date"] >= prev_start) & (df2["date"] < current_start)]
+    else:
+        current = df2
+        previous = pd.DataFrame()
+
+    total_current = int(current[seg_col].sum()) if seg_col else 0
+    total_prev = int(previous[seg_col].sum()) if not previous.empty and seg_col else 0
+    change = total_current - total_prev
+
+    region_lookup = {
+        "great lakes": "Great Lakes",
+        "ohio valley": "Ohio Valley",
+        "southeast": "Southeast",
+    }
+
+    by_region = {}
+    if region_col:
+        tags_lower = current[region_col].astype(str).str.lower()
+        for key, name in region_lookup.items():
+            mask = tags_lower.str.contains(key.replace(" ", "|"), na=False)
+            seg_val = int(current.loc[mask, seg_col].sum()) if seg_col else 0
+            time_val = float(current.loc[mask, time_col].sum()) if time_col else 0.0
+            if seg_val or time_val:
+                by_region[name] = {"segments": seg_val, "hours": time_val}
+
+    top_contributors = []
+    if driver_col and seg_col:
+        counts = current.groupby(current[driver_col].astype(str))[seg_col].sum().sort_values(ascending=False)
+        top_contributors = [{"driver": d, "segments": int(s)} for d, s in counts.head(5).items()]
+    elif vehicle_col and seg_col:
+        counts = current.groupby(current[vehicle_col].astype(str))[seg_col].sum().sort_values(ascending=False)
+        top_contributors = [{"vehicle": v, "segments": int(s)} for v, s in counts.head(5).items()]
+
+    chart = {region: data.get("hours", 0.0) for region, data in by_region.items()}
+
+    return {
+        "by_region": by_region,
+        "total_current": total_current,
+        "change": change,
+        "top_contributors": top_contributors,
+        "chart": chart,
+    }
+
+
+def generate_unassigned_driving_insights(summary_data: Dict) -> str:
+    """Generate narrative insights for Unassigned Driving segments."""
+    try:
+        if not os.environ.get("OPEN_API_KEY"):
+            return generate_fallback_unassigned_driving_insights(summary_data)
+
+        region_lines = "\n".join(
+            [f"   • {r}: {d['segments']} segments" for r, d in summary_data.get("by_region", {}).items()]
+        )
+        top_parts = []
+        for item in summary_data.get("top_contributors", []):
+            name = item.get("driver") or item.get("vehicle")
+            segs = item.get("segments", 0)
+            top_parts.append(f"**{name}** (**{segs}**)" )
+        top_text = ", ".join(top_parts)
+
+        prompt = f"""Provide a detailed paragraph about unassigned driving segments.
+
+        Total Segments: {summary_data['total_current']} ({summary_data['change']:+})
+
+        Regional Breakdown:\n{region_lines}
+
+        Top Contributors: {top_text}
+
+        Mention remediation strategies and week-over-week comparison."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"ERROR in generate_unassigned_driving_insights: {e}")
+        return generate_fallback_unassigned_driving_insights(summary_data)
+
+
+def generate_fallback_unassigned_driving_insights(summary_data: Dict) -> str:
+    change = summary_data.get("change", 0)
+    if change > 0:
+        trend = f"rose by {change}"
+    elif change < 0:
+        trend = f"fell by {abs(change)}"
+    else:
+        trend = "remained stable"
+
+    top = summary_data.get("top_contributors", [])
+    names = ", ".join(
+        item.get("driver") or item.get("vehicle") for item in top
+    )
+    return (
+        f"Unassigned driving segments {trend} to {summary_data.get('total_current', 0)}. "
+        f"Top contributors include {names}. Consider reinforcing login procedures."
+    )
+

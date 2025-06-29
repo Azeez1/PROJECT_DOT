@@ -22,9 +22,17 @@ from .report_generator import (
     generate_trend_insights,
     generate_safety_inbox_summary,  # Add this
     generate_safety_inbox_insights,  # Add this
+    generate_pc_usage_summary,
+    generate_pc_usage_insights,
+    generate_unassigned_driving_summary,
+    generate_unassigned_driving_insights,
 )
 
-from .visualizations.chart_factory import make_stacked_bar, make_trend_line
+from .visualizations.chart_factory import (
+    make_stacked_bar,
+    make_trend_line,
+    make_unassigned_bar_chart,
+)
 
 import re
 
@@ -236,6 +244,71 @@ def build_pdf(
 
     except Exception as e:
         print(f"Error adding Safety Inbox analysis: {e}")
+
+    # Personal Conveyance (PC) Usage section
+    try:
+        pc_df = load_data(wiz_id, "personnel_conveyance")
+        if not pc_df.empty:
+            story.append(Spacer(1, 30))
+            story.append(Paragraph("Personal Conveyance (PC) Usage", section_title_style))
+
+            pc_data = generate_pc_usage_summary(pc_df, end_date or pd.Timestamp.utcnow().date())
+
+            story.append(Paragraph("• Per Driver PC Goal: Max 2 hours/day or 14 hours/week", styles['Normal']))
+            story.append(Paragraph(f"• Total PC Time: {pc_data['total_pc_time']:.2f} hours", styles['Normal']))
+            story.append(Paragraph("• Top PC Users:", styles['Normal']))
+
+            table_rows = [["DRIVERS", "Sum of Personal Conveyance (Duration)"]]
+            for item in pc_data.get("drivers_list", []):
+                td = pd.to_timedelta(item['hours'], unit='h')
+                dur = str(td).split(" ")[-1].split(".")[0]
+                table_rows.append([item['driver'], dur])
+            total_td = pd.to_timedelta(pc_data['total_pc_time'], unit='h')
+            total_dur = str(total_td).split(" ")[-1].split(".")[0]
+            table_rows.append(["Grand Total", total_dur])
+
+            from reportlab.platypus import TableStyle as RLTableStyle
+            pc_table = Table(table_rows, colWidths=[doc.width * 0.5, doc.width * 0.5])
+            pc_table.setStyle(RLTableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#B8CCE4')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ]))
+            story.append(pc_table)
+            story.append(Spacer(1, 12))
+            story.append(Paragraph(
+                "NOTE: All drivers on this report were noted as driving 3+ hours of PC for at least 1 day during the review period",
+                styles['Normal'],
+            ))
+    except Exception as e:
+        print(f"Error loading Personal Conveyance data: {e}")
+
+    # Unassigned Driving Segments section
+    try:
+        unassigned_df = load_data(wiz_id, "unassigned_hos")
+        if not unassigned_df.empty:
+            story.append(Spacer(1, 30))
+            story.append(Paragraph("Unassigned Driving Segments", section_title_style))
+
+            unassigned_data = generate_unassigned_driving_summary(
+                unassigned_df, end_date or pd.Timestamp.utcnow().date()
+            )
+
+            chart_path = make_unassigned_bar_chart(
+                unassigned_data.get("chart", {}), tmpdir / "unassigned_bar.png"
+            )
+            story.append(Image(str(chart_path), width=350, height=230))
+            story.append(Spacer(1, 12))
+
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            unassigned_insights = generate_unassigned_driving_insights(unassigned_data)
+            unassigned_insights = convert_html_to_reportlab(unassigned_insights)
+            story.append(Paragraph(unassigned_insights, styles['Normal']))
+    except Exception as e:
+        print(f"Error loading Unassigned HOS data: {e}")
 
     doc.build(story)
     return out_path
