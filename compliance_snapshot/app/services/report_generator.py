@@ -326,6 +326,7 @@ def generate_safety_inbox_summary(df: pd.DataFrame, trend_end_date: date) -> Dic
     event_breakdown = {}
     if event_type_col:
         # Normalize event types
+        current_week = current_week.copy()
         current_week['event_type_normalized'] = current_week[event_type_col].astype(str).str.strip()
         event_counts = current_week['event_type_normalized'].value_counts()
 
@@ -447,57 +448,72 @@ def generate_fallback_safety_inbox_insights(summary_data: Dict) -> str:
 
 
 def generate_pc_usage_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
-    """Generate Personal Conveyance usage summary from actual data."""
+    """Generate Personal Conveyance usage summary for drivers with 3+ hours in current week."""
     cols = _standardize_columns(df)
 
-    # Dynamically detect driver and duration columns
+    # Find relevant columns
     driver_col = None
     duration_col = None
+    date_col = None
+
     for col in df.columns:
-        lower = col.lower()
-        if "driver" in lower and driver_col is None:
+        col_lower = col.lower()
+        if "driver" in col_lower:
             driver_col = col
-        if any(term in lower for term in ["personal conveyance", "pc duration", "sum of personal"]):
+        if any(term in col_lower for term in ["personal conveyance", "pc duration", "sum of personal"]):
             duration_col = col
+        if "date" in col_lower:
+            date_col = col
 
     if not driver_col or not duration_col:
         raise ValueError(f"Required columns not found. Available: {list(df.columns)}")
 
-    drivers_list: list[tuple[str, str]] = []
-    total_seconds = 0.0
+    # Filter to current week if a date column exists
+    if date_col:
+        df = df.copy()
+        df["date"] = pd.to_datetime(df[date_col], errors="coerce")
+        current_start = pd.Timestamp(_monday_of(trend_end_date))
+        current_end = current_start + pd.Timedelta(days=6)
+        df = df[(df["date"] >= current_start) & (df["date"] <= current_end)]
 
-    for _, row in df.iterrows():
+    # Aggregate durations per driver
+    if date_col and len(df) > 0:
+        aggregated = df.groupby(driver_col).apply(
+            lambda group: sum_pc_durations(group[duration_col])
+        ).reset_index()
+        aggregated.columns = [driver_col, "total_duration"]
+    else:
+        aggregated = df[[driver_col, duration_col]].copy()
+        aggregated["total_duration"] = aggregated[duration_col].apply(lambda d: sum_pc_durations([d]))
+
+    drivers_list = []
+    total_seconds = 0
+
+    for _, row in aggregated.iterrows():
         driver = row[driver_col]
-        duration = row[duration_col]
+        seconds = row["total_duration"]
+        hours = seconds / 3600
+        if hours >= 3:
+            h = int(seconds // 3600)
+            m = int((seconds % 3600) // 60)
+            s = int(seconds % 60)
+            duration_str = f"{h}:{m:02d}:{s:02d}"
+            drivers_list.append((driver, duration_str))
+            total_seconds += seconds
 
-        if pd.notna(driver) and pd.notna(duration):
-            duration_str = str(duration)
-            if ":" in duration_str:
-                parts = duration_str.split(":")
-                if len(parts) >= 3:
-                    h, m, s = int(parts[0]), int(parts[1]), float(parts[2])
-                    total_seconds += h * 3600 + m * 60 + s
-                    drivers_list.append((driver, duration_str))
+    driver_totals_map = dict(zip(aggregated[driver_col], aggregated["total_duration"]))
+    drivers_list.sort(key=lambda x: driver_totals_map.get(x[0], 0), reverse=True)
 
     total_hours = int(total_seconds // 3600)
     total_minutes = int((total_seconds % 3600) // 60)
     total_secs = int(total_seconds % 60)
-    total_pc_time = f"{total_hours}:{total_minutes:02d}:{total_secs:02d}"
-
-    exceeded_daily = 0
-    for _, duration in drivers_list:
-        try:
-            hours = int(str(duration).split(":")[0])
-            if hours >= 3:
-                exceeded_daily += 1
-        except Exception:
-            continue
+    grand_total = f"{total_hours}:{total_minutes:02d}:{total_secs:02d}"
 
     return {
-        "total_pc_time": total_pc_time,
+        "total_pc_time": grand_total,
         "drivers_list": drivers_list,
-        "exceeded_daily_limit_count": exceeded_daily,
-        "grand_total": total_pc_time,
+        "exceeded_daily_limit_count": len(drivers_list),
+        "grand_total": grand_total,
     }
 
 
@@ -543,6 +559,18 @@ def generate_fallback_pc_usage_insights(summary_data: Dict) -> str:
     return f"Total PC usage was {total:.2f} hours with no limit violations detected."
 
 
+def sum_pc_durations(durations):
+    """Sum multiple Personal Conveyance duration strings to seconds."""
+    total_seconds = 0
+    for duration in durations:
+        if pd.notna(duration) and ':' in str(duration):
+            parts = str(duration).split(':')
+            if len(parts) >= 3:
+                h, m, s = int(parts[0]), int(parts[1]), float(parts[2])
+                total_seconds += h * 3600 + m * 60 + s
+    return total_seconds
+
+
 def generate_unassigned_driving_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
     """Process unassigned driving data dynamically."""
     cols = _standardize_columns(df)
@@ -554,13 +582,15 @@ def generate_unassigned_driving_summary(df: pd.DataFrame, trend_end_date: date) 
     tags_col = cols.get("tags") or cols.get("driver_tags")
 
     if "date" in cols:
+        df = df.copy()
         df["date"] = pd.to_datetime(df[cols["date"]], errors="coerce")
         current_start = pd.Timestamp(_monday_of(trend_end_date))
         previous_start = current_start - pd.Timedelta(weeks=1)
-        current_week = df[(df["date"] >= current_start) & (df["date"] <= current_start + pd.Timedelta(days=6))]
-        previous_week = df[(df["date"] >= previous_start) & (df["date"] < current_start)]
+
+        current_week = df[(df["date"] >= current_start) & (df["date"] <= current_start + pd.Timedelta(days=6))].copy()
+        previous_week = df[(df["date"] >= previous_start) & (df["date"] < current_start)].copy()
     else:
-        current_week = df
+        current_week = df.copy()
         previous_week = pd.DataFrame()
 
     total_segments = int(current_week[segments_col].sum()) if segments_col else len(current_week)
