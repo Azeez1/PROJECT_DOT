@@ -811,54 +811,67 @@ def generate_unassigned_segment_details(summary_data: Dict) -> str:
     return insights
 
 
-def generate_speeding_analysis_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
-    """Generate Driver Behavior & Speeding Analysis summary."""
-    cols = _standardize_columns(df)
-
+def generate_speeding_analysis_summary(behaviors_df: pd.DataFrame, safety_df: pd.DataFrame, trend_end_date: date) -> Dict:
+    """Generate Driver Behavior & Speeding Analysis summary from both reports."""
     total_events = 0
     harsh_turn_count = 0
     speeding_by_region = {}
 
-    for col in df.columns:
-        if 'harsh' in col.lower() and 'turn' in col.lower():
-            harsh_turn_count = int(df[col].sum())
-            break
+    # ----- Process Driver Behaviors Report -----
+    if not behaviors_df.empty:
+        cols = _standardize_columns(behaviors_df)
 
-    heavy_col = None
-    severe_col = None
-    for col in df.columns:
-        col_lower = col.lower()
-        if 'heavy' in col_lower and 'speed' in col_lower:
-            heavy_col = col
-        elif 'severe' in col_lower and 'speed' in col_lower:
-            severe_col = col
+        # Look for harsh turn column in behaviors data
+        for col in behaviors_df.columns:
+            if 'harsh' in col.lower() and 'turn' in col.lower():
+                harsh_turn_count += int(behaviors_df[col].sum())
+                break
 
-    tags_col = cols.get('tags')
-    if tags_col:
-        region_mapping = {
-            'great lakes': 'Great Lakes',
-            'ohio valley': 'Ohio Valley',
-            'southeast': 'Southeast',
-            'gl': 'Great Lakes',
-            'ov': 'Ohio Valley',
-            'se': 'Southeast'
-        }
+        heavy_col = None
+        severe_col = None
+        for col in behaviors_df.columns:
+            col_lower = col.lower()
+            if 'heavy' in col_lower and 'speed' in col_lower:
+                heavy_col = col
+            elif 'severe' in col_lower and 'speed' in col_lower:
+                severe_col = col
 
-        for region_key, region_name in region_mapping.items():
-            mask = df[tags_col].str.lower().str.contains(region_key, na=False)
-            if mask.any():
-                region_df = df[mask]
-                heavy_count = 0
-                severe_count = 0
+        tags_col = cols.get('tags')
+        if tags_col:
+            region_mapping = {
+                'great lakes': 'Great Lakes',
+                'ohio valley': 'Ohio Valley',
+                'southeast': 'Southeast',
+                'gl': 'Great Lakes',
+                'ov': 'Ohio Valley',
+                'se': 'Southeast'
+            }
 
-                if heavy_col and heavy_col in region_df.columns:
-                    heavy_count = (region_df[heavy_col] > 0).sum()
+            for region_key, region_name in region_mapping.items():
+                mask = behaviors_df[tags_col].str.lower().str.contains(region_key, na=False)
+                if mask.any():
+                    region_df = behaviors_df[mask]
+                    heavy_count = 0
+                    severe_count = 0
 
-                if severe_col and severe_col in region_df.columns:
-                    severe_count = (region_df[severe_col] > 0).sum()
+                    if heavy_col and heavy_col in region_df.columns:
+                        for val in region_df[heavy_col]:
+                            if pd.notna(val) and str(val).strip() and str(val) != '0' and str(val) != '00:00:00':
+                                heavy_count += 1
 
-                speeding_by_region[region_name] = heavy_count + severe_count
-                total_events += heavy_count + severe_count
+                    if severe_col and severe_col in region_df.columns:
+                        for val in region_df[severe_col]:
+                            if pd.notna(val) and str(val).strip() and str(val) != '0' and str(val) != '00:00:00':
+                                severe_count += 1
+
+                    speeding_by_region[region_name] = speeding_by_region.get(region_name, 0) + heavy_count + severe_count
+                    total_events += heavy_count + severe_count
+
+    # ----- Process Driver Safety Report -----
+    if not safety_df.empty:
+        for col in safety_df.columns:
+            if 'harsh' in col.lower() and 'turn' in col.lower():
+                harsh_turn_count += int(safety_df[col].sum())
 
     return {
         'total_speeding_events': total_events,

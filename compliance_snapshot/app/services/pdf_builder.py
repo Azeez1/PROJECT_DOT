@@ -348,14 +348,18 @@ def build_pdf(
     # Driver Behavior & Speeding Analysis section
     try:
         driver_behaviors_df = load_data(wiz_id, "driver_behaviors")
-        if not driver_behaviors_df.empty:
+        driver_safety_df = load_data(wiz_id, "driver_safety")
+
+        if not driver_behaviors_df.empty or not driver_safety_df.empty:
             story.append(PageBreak())
             story.append(Paragraph("<b>Driver Behavior & Speeding Analysis</b>", section_title_style))
             story.append(Spacer(1, 12))
 
             from .report_generator import generate_speeding_analysis_summary, generate_speeding_analysis_insights
             speeding_data = generate_speeding_analysis_summary(
-                driver_behaviors_df, end_date or pd.Timestamp.utcnow().date()
+                driver_behaviors_df,
+                driver_safety_df,
+                end_date or pd.Timestamp.utcnow().date()
             )
 
             story.append(Paragraph("<b>Insights:</b>", normal_bold))
@@ -379,13 +383,7 @@ def build_pdf(
                 mistdvi_df, end_date or pd.Timestamp.utcnow().date()
             )
 
-            story.append(Paragraph("<b>Insights:</b>", normal_bold))
-            dvir_insights = generate_missed_dvir_insights(dvir_data)
-            dvir_insights = convert_html_to_reportlab(dvir_insights)
-            story.append(Paragraph(dvir_insights, styles['Normal']))
-
-            story.append(Spacer(1, 20))
-
+            # Add DVIR table FIRST
             table_data = [
                 [
                     Paragraph("<b>Driver</b>", styles['Normal']),
@@ -426,6 +424,13 @@ def build_pdf(
                 ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
             ]))
             story.append(dvir_table)
+
+            # Add insights AFTER the table
+            story.append(Spacer(1, 20))
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            dvir_insights = generate_missed_dvir_insights(dvir_data)
+            dvir_insights = convert_html_to_reportlab(dvir_insights)
+            story.append(Paragraph(dvir_insights, styles['Normal']))
 
     except Exception as e:
         print(f"Error loading Missed DVIR data: {e}")
