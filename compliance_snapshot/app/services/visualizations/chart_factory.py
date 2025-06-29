@@ -4,6 +4,8 @@ from pathlib import Path
 import pandas as pd
 from typing import Dict
 
+from ..report_generator import generate_unassigned_driving_summary
+
 VIOLATION_TYPES = [
     "Missing Certifications",
     "Shift Duty Limit",
