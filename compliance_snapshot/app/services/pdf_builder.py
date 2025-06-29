@@ -341,8 +341,94 @@ def build_pdf(
                 story.append(Paragraph("<b>Unassigned Driving Segments</b>", section_title_style))
                 story.append(Paragraph("Unable to process unassigned driving data.", styles['Normal']))
 
+
     except Exception as e:
         print(f"Error loading Unassigned HOS data: {e}")
+
+    # Driver Behavior & Speeding Analysis section
+    try:
+        driver_behaviors_df = load_data(wiz_id, "driver_behaviors")
+        if not driver_behaviors_df.empty:
+            story.append(PageBreak())
+            story.append(Paragraph("<b>Driver Behavior & Speeding Analysis</b>", section_title_style))
+            story.append(Spacer(1, 12))
+
+            from .report_generator import generate_speeding_analysis_summary, generate_speeding_analysis_insights
+            speeding_data = generate_speeding_analysis_summary(
+                driver_behaviors_df, end_date or pd.Timestamp.utcnow().date()
+            )
+
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            speeding_insights = generate_speeding_analysis_insights(speeding_data)
+            speeding_insights = convert_html_to_reportlab(speeding_insights)
+            story.append(Paragraph(speeding_insights, styles['Normal']))
+
+    except Exception as e:
+        print(f"Error loading Driver Behaviors data: {e}")
+
+    # Missed DVIRs section
+    try:
+        mistdvi_df = load_data(wiz_id, "mistdvi")
+        if not mistdvi_df.empty:
+            story.append(Spacer(1, 30))
+            story.append(Paragraph("<b>Missed DVIRs (Pre/Post Trip Reports)</b>", section_title_style))
+            story.append(Spacer(1, 12))
+
+            from .report_generator import generate_missed_dvir_summary, generate_missed_dvir_insights
+            dvir_data = generate_missed_dvir_summary(
+                mistdvi_df, end_date or pd.Timestamp.utcnow().date()
+            )
+
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            dvir_insights = generate_missed_dvir_insights(dvir_data)
+            dvir_insights = convert_html_to_reportlab(dvir_insights)
+            story.append(Paragraph(dvir_insights, styles['Normal']))
+
+            story.append(Spacer(1, 20))
+
+            table_data = [
+                [
+                    Paragraph("<b>Driver</b>", styles['Normal']),
+                    Paragraph("<b>POST-TRIP</b>", styles['Normal']),
+                    Paragraph("<b>PRE-TRIP</b>", styles['Normal']),
+                    Paragraph("<b>Grand Total</b>", styles['Normal'])
+                ]
+            ]
+
+            for driver_data in dvir_data['top_drivers']:
+                table_data.append([
+                    Paragraph(driver_data['driver'], styles['Normal']),
+                    Paragraph(str(driver_data['post_trip']), styles['Normal']),
+                    Paragraph(str(driver_data['pre_trip']), styles['Normal']),
+                    Paragraph(str(driver_data['total']), styles['Normal'])
+                ])
+
+            table_data.append([
+                Paragraph("<b>Grand Total</b>", styles['Normal']),
+                Paragraph(f"<b>{dvir_data['total_post_trip']}</b>", styles['Normal']),
+                Paragraph(f"<b>{dvir_data['total_pre_trip']}</b>", styles['Normal']),
+                Paragraph(f"<b>{dvir_data['total_missed']}</b>", styles['Normal'])
+            ])
+
+            from reportlab.platypus import TableStyle as RLTableStyle
+            dvir_table = Table(
+                table_data,
+                colWidths=[doc.width * 0.4, doc.width * 0.2, doc.width * 0.2, doc.width * 0.2]
+            )
+            dvir_table.setStyle(RLTableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#B8CCE4')),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#B8CCE4')),
+                ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ]))
+            story.append(dvir_table)
+
+    except Exception as e:
+        print(f"Error loading Missed DVIR data: {e}")
 
     doc.build(story)
     return out_path
