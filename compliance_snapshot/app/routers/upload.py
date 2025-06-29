@@ -11,7 +11,8 @@ import sqlite3
 import logging
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+# Load templates from the package's template directory
+templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 
 @router.get("/", tags=["health"])
 async def root():
@@ -19,7 +20,14 @@ async def root():
 
 @router.get("/upload", response_class=HTMLResponse, tags=["ui"])
 async def upload_form(request: Request):
-    return templates.TemplateResponse("upload.html", {"request": request})
+    print("DEBUG: Upload form requested")
+    try:
+        response = templates.TemplateResponse("upload.html", {"request": request})
+        print("DEBUG: Template response created")
+        return response
+    except Exception as e:
+        print(f"DEBUG: Error loading template: {e}")
+        raise
 
 @router.post("/generate", tags=["generate"])
 async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
