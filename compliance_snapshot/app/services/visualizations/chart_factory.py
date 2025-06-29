@@ -4,7 +4,6 @@ from pathlib import Path
 import pandas as pd
 from typing import Dict
 
-from ..report_generator import generate_unassigned_driving_summary
 
 VIOLATION_TYPES = [
     "Missing Certifications",
@@ -189,6 +188,9 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
 
 def make_unassigned_bar_chart(df: pd.DataFrame, out_path: Path) -> Path:
     """Create bar chart from actual unassigned driving data."""
+    # Import here to avoid circular dependency with report_generator
+    from ..report_generator import generate_unassigned_driving_summary
+
     summary = generate_unassigned_driving_summary(df, pd.Timestamp.utcnow().date())
     region_data = summary.get("region_data", {})
 
