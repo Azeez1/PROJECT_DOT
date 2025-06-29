@@ -81,19 +81,19 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         if any('driver' in col for col in cols_norm):
             report_type = 'driver_behaviors'
     elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_norm):
-        report_type = 'drivers_safety'
+        report_type = 'driver_safety'
     elif any('trip id' in col or 'trip_id' in col for col in cols_norm):
         if any('vehicle' in col for col in cols_norm) and any('driver' in col for col in cols_norm):
-            report_type = 'drivers_safety'
+            return 'driver_safety', df
     elif any('trip id' in col or 'trip_id' in col for col in cols_norm) and any('driver id' in col or 'driver_id' in col for col in cols_norm):
         if any('harsh' in col or 'collision' in col or 'seat belt' in col for col in cols_norm):
-            report_type = 'drivers_safety'
+            return 'driver_safety', df
     elif any('harsh accel' in col or 'harsh brake' in col or 'harsh turn' in col for col in cols_norm):
-        report_type = 'drivers_safety'
+        report_type = 'driver_safety'
     elif sum(1 for col in cols_norm if any(event in col for event in ['harsh accel', 'harsh brake', 'harsh turn', 'mobile usage', 'drowsy', 'seat belt'])) >= 3:
-        report_type = 'drivers_safety'
+        return 'driver_safety', df
 
-    filename_lower = filepath.stem.lower().replace('_', ' ')
+    filename_lower = filepath.stem.lower()
     if 'hos' in filename_lower and 'violation' in filename_lower:
         report_type = report_type or 'hos'
     elif 'safety' in filename_lower and 'inbox' in filename_lower:
@@ -101,9 +101,9 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
     elif 'mistdvi' in filename_lower or 'missed dvir' in filename_lower or ('dvir' in filename_lower and 'miss' in filename_lower):
         report_type = report_type or 'mistdvi'
     elif 'safety behavior' in filename_lower or 'driver behavior' in filename_lower:
-        report_type = report_type or 'driver_behaviors'
-    elif 'driver safety' in filename_lower or 'drivers safety' in filename_lower:
-        report_type = report_type or 'drivers_safety'
+        return 'driver_behaviors', df
+    elif 'driver safety' in filename_lower and 'behavior' not in filename_lower:
+        return 'driver_safety', df
     if 'unassigned' in filename_lower and ('hos' in filename_lower or 'hours' in filename_lower):
         report_type = report_type or 'unassigned_hos'
 
