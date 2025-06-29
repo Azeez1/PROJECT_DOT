@@ -433,6 +433,7 @@ async function openTab(table){
   // After creating the DataTable, add column visibility button if many columns
   if(columns.length > 10) {
     const visBtn = document.createElement('button');
+    visBtn.type = 'button';
     visBtn.className = 'column-vis-btn';
     visBtn.textContent = 'Show/Hide Columns';
     visBtn.onclick = () => {
@@ -442,7 +443,7 @@ async function openTab(table){
 
     const dropdown = document.createElement('div');
     dropdown.id = 'column-dropdown';
-    dropdown.style.cssText = 'display:none;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;margin-bottom:1rem;max-height:300px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);';
+    dropdown.style.cssText = 'display:none;background:white;border:2px solid #2a5298;border-radius:8px;padding:1rem;margin-bottom:1rem;max-height:300px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15);position:relative;z-index:10;';
 
     columns.forEach((col, idx) => {
         const label = document.createElement('label');
