@@ -91,3 +91,32 @@ def test_detect_mistdvi_by_filename(tmp_path):
 
     report, _ = detect_report_type(path)
     assert report == 'mistdvi'
+
+
+def test_detect_driver_behaviors_by_cols(tmp_path):
+    cols = [
+        'Driver Name',
+        'Safety Score Rank',
+        'Safety Score',
+        'Harsh Turn Count',
+        'Heavy Speeding Time (hh:mm:ss)',
+        'Severe Speeding Time (hh:mm:ss)',
+        'Max Speed (mph)',
+        'Tags',
+        'Deactivation Status'
+    ]
+    df = pd.DataFrame([], columns=cols)
+    path = tmp_path / 'safety_behavior.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'driver_behaviors'
+
+
+def test_detect_driver_behaviors_by_filename(tmp_path):
+    df = pd.DataFrame([], columns=['A', 'B'])
+    path = tmp_path / 'Safety_Behavior_Report.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'driver_behaviors'
