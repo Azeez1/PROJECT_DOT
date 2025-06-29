@@ -254,35 +254,38 @@ def build_pdf(
 
             pc_data = generate_pc_usage_summary(pc_df, end_date or pd.Timestamp.utcnow().date())
 
-            story.append(Paragraph("• Per Driver PC Goal: Max 2 hours/day or 14 hours/week", styles['Normal']))
-            story.append(Paragraph(f"• Total PC Time: {pc_data['total_pc_time']:.2f} hours", styles['Normal']))
-            story.append(Paragraph("• Top PC Users:", styles['Normal']))
+            story.append(Paragraph("• <b>Per Driver PC Goal:</b> Max 2 hours/day or 14 hours/week", styles['Normal']))
+            story.append(Paragraph(f"• <b>Total PC Time:</b> {pc_data['total_pc_time']} hours", styles['Normal']))
+            story.append(Paragraph("• <b>Top PC Users:</b>", styles['Normal']))
 
-            table_rows = [["DRIVERS", "Sum of Personal Conveyance (Duration)"]]
-            for item in pc_data.get("drivers_list", []):
-                td = pd.to_timedelta(item['hours'], unit='h')
-                dur = str(td).split(" ")[-1].split(".")[0]
-                table_rows.append([item['driver'], dur])
-            total_td = pd.to_timedelta(pc_data['total_pc_time'], unit='h')
-            total_dur = str(total_td).split(" ")[-1].split(".")[0]
-            table_rows.append(["Grand Total", total_dur])
+            table_data = [
+                [Paragraph("<b>DRIVERS</b>", styles['Normal']),
+                 Paragraph("<b>Sum of Personal Conveyance (Duration)</b>", styles['Normal'])]
+            ]
+            for driver_name, duration in pc_data['drivers_list']:
+                table_data.append([
+                    Paragraph(driver_name, styles['Normal']),
+                    Paragraph(duration, styles['Normal'])
+                ])
+            table_data.append([
+                Paragraph("<b>Grand Total</b>", styles['Normal']),
+                Paragraph(f"<b>{pc_data['grand_total']}</b>", styles['Normal'])
+            ])
 
             from reportlab.platypus import TableStyle as RLTableStyle
-            pc_table = Table(table_rows, colWidths=[doc.width * 0.5, doc.width * 0.5])
+            pc_table = Table(table_data, colWidths=[doc.width * 0.6, doc.width * 0.4])
             pc_table.setStyle(RLTableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#B8CCE4')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-                ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('LINEBELOW', (0, -2), (-1, -2), 1, colors.black),
                 ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
             ]))
             story.append(pc_table)
             story.append(Spacer(1, 12))
-            story.append(Paragraph(
-                "NOTE: All drivers on this report were noted as driving 3+ hours of PC for at least 1 day during the review period",
-                styles['Normal'],
-            ))
     except Exception as e:
         print(f"Error loading Personal Conveyance data: {e}")
 
@@ -298,7 +301,7 @@ def build_pdf(
             )
 
             chart_path = make_unassigned_bar_chart(
-                unassigned_data.get("chart", {}), tmpdir / "unassigned_bar.png"
+                unassigned_df, tmpdir / "unassigned_bar.png"
             )
             story.append(Image(str(chart_path), width=350, height=230))
             story.append(Spacer(1, 12))
