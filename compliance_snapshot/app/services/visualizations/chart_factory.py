@@ -184,35 +184,54 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     return out_path
 
 
-def make_unassigned_bar_chart(region_hours: dict[str, float], out_path: Path) -> Path:
-    """Create a vertical bar chart of unassigned driving hours by region."""
+def make_unassigned_bar_chart(df: pd.DataFrame, out_path: Path) -> Path:
+    """Create bar chart from actual unassigned driving data."""
+    summary = generate_unassigned_driving_summary(df, pd.Timestamp.utcnow().date())
+    region_data = summary.get("region_data", {})
+
     plt.style.use("seaborn-v0_8-whitegrid")
-    fig, ax = plt.subplots(figsize=(5, 3))
-    fig.patch.set_facecolor("#E5E5E5")
-    ax.set_facecolor("#E5E5E5")
 
-    regions = list(region_hours.keys())
-    hours = [region_hours[r] for r in regions]
+    if not region_data:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.text(0.5, 0.5, "No Data Available", ha="center", va="center")
+        plt.savefig(out_path)
+        plt.close()
+        return out_path
 
-    bars = ax.bar(regions, hours, color="#5B9BD5")
-    for bar, h in zip(bars, hours):
-        td = pd.to_timedelta(h, unit="h")
-        label = str(td).split(" ")[-1].split(".")[0]
+    regions = list(region_data.keys())
+    time_labels = [region_data[r]["time_str"] for r in regions]
+    hours = [region_data[r]["total_seconds"] / 3600 for r in regions]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    fig.patch.set_facecolor("#CCCCCC")
+    ax.set_facecolor("#CCCCCC")
+
+    bars = ax.bar(regions, hours, color="#5B9BD5", width=0.5)
+
+    for bar, label in zip(bars, time_labels):
+        height = bar.get_height()
         ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height(),
+            bar.get_x() + bar.get_width() / 2.0,
+            height + max(hours) * 0.02,
             label,
             ha="center",
             va="bottom",
-            fontsize=8,
-            color="black",
+            fontsize=10,
+            fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="#5B9BD5", edgecolor="none"),
+            color="white",
         )
 
-    ax.set_xlabel("")
-    ax.set_ylabel("Duration (HH:MM:SS)", color="black")
-    ax.set_title("Total", color="black")
+    ax.set_title("Total", fontsize=16, pad=20, fontweight="bold")
+    ax.set_ylabel("Duration (HH:MM:SS)", fontsize=10)
+    ax.set_ylim(0, max(hours) * 1.15 if hours else 1)
+    ax.grid(True, axis="y", alpha=0.3, color="white")
+    ax.set_axisbelow(True)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
     plt.tight_layout()
-    plt.savefig(out_path, dpi=200)
+    plt.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="#CCCCCC")
     plt.close()
     return out_path
 
