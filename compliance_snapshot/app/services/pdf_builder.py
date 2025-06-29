@@ -20,6 +20,8 @@ from .report_generator import (
     generate_hos_trend_analysis,
     generate_summary_insights,
     generate_trend_insights,
+    generate_safety_inbox_summary,  # Add this
+    generate_safety_inbox_insights,  # Add this
 )
 
 from .visualizations.chart_factory import make_stacked_bar, make_trend_line
@@ -184,6 +186,56 @@ def build_pdf(
     # Trend Insights
     story.append(Paragraph("<b>Insights:</b>", normal_bold))
     story.append(Paragraph(trend_insights, styles['Normal']))
+
+    # Add Safety Inbox Events Analysis if the data exists
+    try:
+        safety_inbox_df = load_data(wiz_id, "safety_inbox")
+        if not safety_inbox_df.empty:
+            # Safety Inbox Events Analysis section
+            story.append(Spacer(1, 30))
+            story.append(Paragraph("<b>Safety Inbox Events Analysis</b>", section_title_style))
+
+            # Generate summary data
+            safety_inbox_data = generate_safety_inbox_summary(
+                safety_inbox_df, end_date or pd.Timestamp.utcnow().date()
+            )
+
+            # Create two-column layout
+            left_items = []
+            right_items = []
+
+            # Left column - main statistics
+            left_items.append(Paragraph(f"• <b>Total Safety Events:</b> {safety_inbox_data['total_current']} ({safety_inbox_data['total_change']:+})", styles['Normal']))
+            left_items.append(Paragraph(f"• <b>Dismissed:</b> {safety_inbox_data['dismissed_count']}", styles['Normal']))
+            left_items.append(Paragraph("• <b>Breakdown by Region:</b>", styles['Normal']))
+            for region, count in safety_inbox_data.get("by_region", {}).items():
+                left_items.append(Paragraph(f"   ○ {region}: {count}", styles['Normal']))
+
+            # Right column - event breakdown
+            right_items.append(Paragraph("<b>Event Breakdown:</b>", styles['Normal']))
+            for event, count in safety_inbox_data.get("event_breakdown", {}).items():
+                right_items.append(Paragraph(f"• {event}: {count}", styles['Normal']))
+
+            # Create the two-column table
+            from reportlab.platypus import TableStyle as RLTableStyle
+            safety_table_data = [[left_items, right_items]]
+            safety_table = Table(safety_table_data, colWidths=[doc.width * 0.5, doc.width * 0.5])
+            safety_table.setStyle(RLTableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            story.append(safety_table)
+            story.append(Spacer(1, 20))
+
+            # Add insights
+            story.append(Paragraph("<b>Insights:</b>", normal_bold))
+            safety_insights = generate_safety_inbox_insights(safety_inbox_data)
+            safety_insights = convert_html_to_reportlab(safety_insights)
+            story.append(Paragraph(safety_insights, styles['Normal']))
+
+    except Exception as e:
+        print(f"Error adding Safety Inbox analysis: {e}")
 
     doc.build(story)
     return out_path
