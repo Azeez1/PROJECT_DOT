@@ -79,6 +79,13 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
             return 'driver_behaviors', df
     elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_norm):
         return 'drivers_safety', df
+    elif any('trip id' in col or 'trip_id' in col for col in cols_norm) and any('driver id' in col or 'driver_id' in col for col in cols_norm):
+        # If we have trip ID and driver ID, likely a driver safety report
+        if any('harsh' in col or 'collision' in col or 'seat belt' in col for col in cols_norm):
+            return 'drivers_safety', df
+    elif any('harsh accel' in col or 'harsh brake' in col or 'harsh turn' in col for col in cols_norm):
+        # Multiple harsh event columns indicate driver safety report
+        return 'drivers_safety', df
 
     filename_lower = filepath.stem.lower().replace('_', ' ')
     if 'hos' in filename_lower and 'violation' in filename_lower:
@@ -89,6 +96,8 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         return 'mistdvi', df
     elif 'safety behavior' in filename_lower or 'driver behavior' in filename_lower:
         return 'driver_behaviors', df
+    elif 'driver safety' in filename_lower or 'drivers safety' in filename_lower:
+        return 'drivers_safety', df
     # Fallback detection for Unassigned HOS based on filename
     if 'unassigned' in filename_lower and ('hos' in filename_lower or 'hours' in filename_lower):
         return 'unassigned_hos', df
