@@ -24,7 +24,7 @@ from .report_generator import (
     generate_safety_inbox_insights,  # Add this
     generate_pc_usage_summary,
     generate_pc_usage_insights,
-    generate_unassigned_driving_summary,
+    generate_unassigned_driving_summary,  # Added missing import
     generate_unassigned_driving_insights,
     generate_unassigned_segment_details,
 )
