@@ -115,14 +115,14 @@ def test_detect_driver_behaviors_by_cols(tmp_path):
 
 def test_detect_driver_behaviors_by_filename(tmp_path):
     df = pd.DataFrame([], columns=['A', 'B'])
-    path = tmp_path / 'Safety_Behavior_Report.csv'
+    path = tmp_path / 'Safety Behavior Report.csv'
     df.to_csv(path, index=False)
 
     report, _ = detect_report_type(path)
     assert report == 'driver_behaviors'
 
 
-def test_detect_drivers_safety_by_cols(tmp_path):
+def test_detect_driver_safety_by_cols(tmp_path):
     cols = [
         'Trip ID',
         'Vehicle ID',
@@ -131,17 +131,17 @@ def test_detect_drivers_safety_by_cols(tmp_path):
         'Harsh Brake'
     ]
     df = pd.DataFrame([], columns=cols)
-    path = tmp_path / 'drivers_safety.csv'
+    path = tmp_path / 'driver_safety.csv'
     df.to_csv(path, index=False)
 
     report, _ = detect_report_type(path)
-    assert report == 'drivers_safety'
+    assert report == 'driver_safety'
 
 
-def test_detect_drivers_safety_by_filename(tmp_path):
+def test_detect_driver_safety_by_filename(tmp_path):
     df = pd.DataFrame([], columns=['A', 'B'])
-    path = tmp_path / 'Driver_Safety_Report.csv'
+    path = tmp_path / 'Driver Safety Report.csv'
     df.to_csv(path, index=False)
 
     report, _ = detect_report_type(path)
-    assert report == 'drivers_safety'
+    assert report == 'driver_safety'
