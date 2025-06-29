@@ -307,29 +307,40 @@ def build_pdf(
         if not unassigned_df.empty:
             story.append(Spacer(1, 30))
 
-            unassigned_data = generate_unassigned_driving_summary(
-                unassigned_df, end_date or pd.Timestamp.utcnow().date()
-            )
+            try:
+                # Generate summary data
+                unassigned_data = generate_unassigned_driving_summary(
+                    unassigned_df, end_date or pd.Timestamp.utcnow().date()
+                )
 
-            unassigned_bar_path = make_unassigned_bar_chart(
-                unassigned_df, tmpdir / "unassigned_bar.png"
-            )
-            story.append(Image(str(unassigned_bar_path), width=450, height=300))
+                # Only add chart if we have regional data
+                if unassigned_data.get('region_data'):
+                    unassigned_bar_path = make_unassigned_bar_chart(
+                        unassigned_df, tmpdir / "unassigned_bar.png"
+                    )
+                    story.append(Image(str(unassigned_bar_path), width=450, height=300))
 
-            story.append(Spacer(1, 20))
-            story.append(Paragraph("<b>Insights:</b>", normal_bold))
-            first_insights = generate_unassigned_driving_insights(unassigned_data)
-            first_insights = convert_html_to_reportlab(first_insights)
-            story.append(Paragraph(first_insights, styles['Normal']))
+                # Add insights regardless
+                story.append(Spacer(1, 20))
+                story.append(Paragraph("<b>Insights:</b>", normal_bold))
+                first_insights = generate_unassigned_driving_insights(unassigned_data)
+                first_insights = convert_html_to_reportlab(first_insights)
+                story.append(Paragraph(first_insights, styles['Normal']))
 
-            story.append(Spacer(1, 30))
-            story.append(Paragraph("<b>Unassigned Driving Segments</b>", section_title_style))
+                # Add section header and second insights
+                story.append(Spacer(1, 30))
+                story.append(Paragraph("<b>Unassigned Driving Segments</b>", section_title_style))
+                story.append(Spacer(1, 12))
+                story.append(Paragraph("<b>Insights:</b>", normal_bold))
+                second_insights = generate_unassigned_segment_details(unassigned_data)
+                second_insights = convert_html_to_reportlab(second_insights)
+                story.append(Paragraph(second_insights, styles['Normal']))
+            except Exception as e:
+                print(f"Error processing Unassigned HOS data: {e}")
+                # Add a placeholder message
+                story.append(Paragraph("<b>Unassigned Driving Segments</b>", section_title_style))
+                story.append(Paragraph("Unable to process unassigned driving data.", styles['Normal']))
 
-            story.append(Spacer(1, 12))
-            story.append(Paragraph("<b>Insights:</b>", normal_bold))
-            second_insights = generate_unassigned_segment_details(unassigned_data)
-            second_insights = convert_html_to_reportlab(second_insights)
-            story.append(Paragraph(second_insights, styles['Normal']))
     except Exception as e:
         print(f"Error loading Unassigned HOS data: {e}")
 
