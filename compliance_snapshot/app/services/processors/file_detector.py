@@ -39,67 +39,76 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
     missing = sorted(expected_norm - set(cols_norm))
     logger.debug("Missing Safety Inbox columns: %s", missing)
 
+    # User-requested debug output
+    print(f"DEBUG: Checking file {filepath.name}")
+    print(f"DEBUG: First 5 columns: {df.columns.tolist()[:5]}")
+
+    report_type: Optional[str] = None
+
     if any('violation type' in col for col in cols_norm):
-        return 'hos', df
+        report_type = 'hos'
     elif expected_norm <= set(cols_norm):
-        return 'safety_inbox', df
+        report_type = 'safety_inbox'
     elif any('event type' in col for col in cols_norm) and any('driver' in col for col in cols_norm):
         safety_cols = ['vehicle', 'status', 'review status', 'event url']
         if any(any(s in col for col in cols_norm) for s in safety_cols):
-            return 'safety_inbox', df
+            report_type = 'safety_inbox'
     elif any('personal conveyance' in col for col in cols_norm):
-        # Check for the duration column with parentheses
         if any('personal conveyance (duration)' in col or 'personal conveyance duration' in col for col in cols_norm):
-            return 'personnel_conveyance', df
-        # Also check for driver name and date as additional validation
+            report_type = 'personnel_conveyance'
         elif any('driver name' in col for col in cols_norm) and any('date' in col for col in cols_norm):
-            return 'personnel_conveyance', df
+            report_type = 'personnel_conveyance'
     elif any('pc_duration' in col for col in cols_norm):
-        return 'personnel_conveyance', df
+        report_type = 'personnel_conveyance'
     elif any('unassigned' in col and ('time' in col or 'segments' in col) for col in cols_norm):
         # Additional check for vehicle column
         if any('vehicle' in col for col in cols_norm):
-            return 'unassigned_hos', df
-        # Still return unassigned_hos if we have strong indicators
+            report_type = 'unassigned_hos'
         elif any('unassigned segments' in col or 'unassigned time' in col for col in cols_norm):
-            return 'unassigned_hos', df
+            report_type = 'unassigned_hos'
     elif any('mistdvi' in col or 'missed dvir' in col or 'dvir' in col for col in cols_norm):
-        return 'mistdvi', df
+        report_type = 'mistdvi'
     elif all(col in cols_norm for col in ['vehicle', 'driver', 'start time', 'end time', 'type']):
         # If we have all these specific columns, it's likely a Missed DVIR report
-        return 'mistdvi', df
+        report_type = 'mistdvi'
     elif any('driver' in col and 'behavior' in col for col in cols_norm):
-        return 'driver_behaviors', df
+        report_type = 'driver_behaviors'
     elif any('safety score' in col for col in cols_norm) and any('driver name' in col for col in cols_norm):
         # If we have safety score and driver name, it's likely a safety behavior report
-        return 'driver_behaviors', df
+        report_type = 'driver_behaviors'
     elif any('harsh turn' in col for col in cols_norm) or any('speeding time' in col for col in cols_norm):
         # Additional indicators for safety behavior report
         if any('driver' in col for col in cols_norm):
-            return 'driver_behaviors', df
+            report_type = 'driver_behaviors'
     elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_norm):
-        return 'drivers_safety', df
+        report_type = 'drivers_safety'
+    elif any('trip id' in col or 'trip_id' in col for col in cols_norm):
+        if any('vehicle' in col for col in cols_norm) and any('driver' in col for col in cols_norm):
+            report_type = 'drivers_safety'
     elif any('trip id' in col or 'trip_id' in col for col in cols_norm) and any('driver id' in col or 'driver_id' in col for col in cols_norm):
-        # If we have trip ID and driver ID, likely a driver safety report
         if any('harsh' in col or 'collision' in col or 'seat belt' in col for col in cols_norm):
-            return 'drivers_safety', df
+            report_type = 'drivers_safety'
     elif any('harsh accel' in col or 'harsh brake' in col or 'harsh turn' in col for col in cols_norm):
-        # Multiple harsh event columns indicate driver safety report
-        return 'drivers_safety', df
+        report_type = 'drivers_safety'
+    elif sum(1 for col in cols_norm if any(event in col for event in ['harsh accel', 'harsh brake', 'harsh turn', 'mobile usage', 'drowsy', 'seat belt'])) >= 3:
+        report_type = 'drivers_safety'
 
     filename_lower = filepath.stem.lower().replace('_', ' ')
     if 'hos' in filename_lower and 'violation' in filename_lower:
-        return 'hos', df
+        report_type = report_type or 'hos'
     elif 'safety' in filename_lower and 'inbox' in filename_lower:
-        return 'safety_inbox', df
+        report_type = report_type or 'safety_inbox'
     elif 'mistdvi' in filename_lower or 'missed dvir' in filename_lower or ('dvir' in filename_lower and 'miss' in filename_lower):
-        return 'mistdvi', df
+        report_type = report_type or 'mistdvi'
     elif 'safety behavior' in filename_lower or 'driver behavior' in filename_lower:
-        return 'driver_behaviors', df
+        report_type = report_type or 'driver_behaviors'
     elif 'driver safety' in filename_lower or 'drivers safety' in filename_lower:
-        return 'drivers_safety', df
-    # Fallback detection for Unassigned HOS based on filename
+        report_type = report_type or 'drivers_safety'
     if 'unassigned' in filename_lower and ('hos' in filename_lower or 'hours' in filename_lower):
-        return 'unassigned_hos', df
+        report_type = report_type or 'unassigned_hos'
 
-    return 'hos', df
+    if not report_type:
+        report_type = 'hos'
+
+    print(f"DEBUG: File {filepath.name} detected as: {report_type}")
+    return report_type, df
