@@ -184,6 +184,39 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     return out_path
 
 
+def make_unassigned_bar_chart(region_hours: dict[str, float], out_path: Path) -> Path:
+    """Create a vertical bar chart of unassigned driving hours by region."""
+    plt.style.use("seaborn-v0_8-whitegrid")
+    fig, ax = plt.subplots(figsize=(5, 3))
+    fig.patch.set_facecolor("#E5E5E5")
+    ax.set_facecolor("#E5E5E5")
+
+    regions = list(region_hours.keys())
+    hours = [region_hours[r] for r in regions]
+
+    bars = ax.bar(regions, hours, color="#5B9BD5")
+    for bar, h in zip(bars, hours):
+        td = pd.to_timedelta(h, unit="h")
+        label = str(td).split(" ")[-1].split(".")[0]
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            label,
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="black",
+        )
+
+    ax.set_xlabel("")
+    ax.set_ylabel("Duration (HH:MM:SS)", color="black")
+    ax.set_title("Total", color="black")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200)
+    plt.close()
+    return out_path
+
+
 def make_trend_line(
     df: pd.DataFrame,
     end_date=None,
