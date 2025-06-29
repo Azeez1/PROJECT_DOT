@@ -239,6 +239,11 @@
     .column-vis-btn:hover {
         background: #1e3c72;
     }
+
+    #column-dropdown button:hover {
+        opacity: 0.8;
+        transform: translateY(-1px);
+    }
   </style>
 </head><body>
   <div class="wizard-header">
@@ -422,8 +427,9 @@ async function openTab(table){
     lengthMenu: [[10,25,50,100,-1],[10,25,50,100,'All']],
     pageLength: 10,
     autoWidth: false,
-    scrollX: true,  // Enable horizontal scrolling
+    scrollX: true,
     scrollCollapse: true,
+    // For tables with many columns, show fewer by default
     columnDefs: columns.length > 15 ? [
         { targets: Array.from({length: columns.length}, (_, i) => i).slice(10), visible: false }
     ] : []
@@ -432,39 +438,79 @@ async function openTab(table){
 
   // After creating the DataTable, add column visibility button if many columns
   if(columns.length > 10) {
-    const visBtn = document.createElement('button');
-    visBtn.type = 'button';
-    visBtn.className = 'column-vis-btn';
-    visBtn.textContent = 'Show/Hide Columns';
-    visBtn.onclick = () => {
-        const dropdown = document.getElementById('column-dropdown');
-        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-    };
+      // Add column visibility button before the table
+      const visBtn = document.createElement('button');
+      visBtn.type = 'button';  // Prevent form submission
+      visBtn.className = 'column-vis-btn';
+      visBtn.textContent = 'Show/Hide Columns';
+      visBtn.onclick = () => {
+          const dropdown = document.getElementById('column-dropdown');
+          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      };
 
-    const dropdown = document.createElement('div');
-    dropdown.id = 'column-dropdown';
-    dropdown.style.cssText = 'display:none;background:white;border:2px solid #2a5298;border-radius:8px;padding:1rem;margin-bottom:1rem;max-height:300px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15);position:relative;z-index:10;';
+      // Create column visibility dropdown
+      const dropdown = document.createElement('div');
+      dropdown.id = 'column-dropdown';
+      dropdown.style.cssText = 'display:none;background:white;border:2px solid #2a5298;border-radius:8px;padding:1rem;margin-bottom:1rem;max-height:300px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15);position:relative;z-index:10;';
 
-    columns.forEach((col, idx) => {
-        const label = document.createElement('label');
-        label.style.cssText = 'display:block;margin:0.25rem 0;cursor:pointer;';
+      // Add Select All / Deselect All buttons
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'margin-bottom:0.5rem;padding-bottom:0.5rem;border-bottom:1px solid #e2e8f0;';
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = true;
-        checkbox.style.marginRight = '0.5rem';
-        checkbox.onchange = () => {
-            const column = dt.column(idx);
-            column.visible(checkbox.checked);
-        };
+      const selectAllBtn = document.createElement('button');
+      selectAllBtn.type = 'button';
+      selectAllBtn.textContent = 'Select All';
+      selectAllBtn.style.cssText = 'background:#2a5298;color:white;border:none;padding:0.25rem 0.75rem;border-radius:4px;margin-right:0.5rem;cursor:pointer;font-size:0.875rem;';
+      selectAllBtn.onclick = () => {
+          dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+              cb.checked = true;
+              cb.onchange();
+          });
+      };
 
-        label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(col));
-        dropdown.appendChild(label);
-    });
+      const deselectAllBtn = document.createElement('button');
+      deselectAllBtn.type = 'button';
+      deselectAllBtn.textContent = 'Deselect All';
+      deselectAllBtn.style.cssText = 'background:#6c757d;color:white;border:none;padding:0.25rem 0.75rem;border-radius:4px;cursor:pointer;font-size:0.875rem;';
+      deselectAllBtn.onclick = () => {
+          dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+              cb.checked = false;
+              cb.onchange();
+          });
+      };
 
-    filtersDiv.parentNode.insertBefore(visBtn, filtersDiv);
-    filtersDiv.parentNode.insertBefore(dropdown, filtersDiv);
+      buttonContainer.appendChild(selectAllBtn);
+      buttonContainer.appendChild(deselectAllBtn);
+      dropdown.appendChild(buttonContainer);
+
+      // Create checkboxes for each column
+      columns.forEach((col, idx) => {
+          const label = document.createElement('label');
+          label.style.cssText = 'display:block;margin:0.25rem 0;cursor:pointer;';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = true;
+          checkbox.style.marginRight = '0.5rem';
+          checkbox.onchange = () => {
+              const column = dt.column(idx);
+              column.visible(checkbox.checked);
+
+              // Also hide/show the corresponding filter dropdown
+              const filterSelects = document.querySelectorAll('#filters select');
+              if (filterSelects[idx]) {
+                  filterSelects[idx].style.display = checkbox.checked ? '' : 'none';
+              }
+          };
+
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(col));
+          dropdown.appendChild(label);
+      });
+
+      // Insert controls before the filters div
+      filtersDiv.parentNode.insertBefore(visBtn, filtersDiv);
+      filtersDiv.parentNode.insertBefore(dropdown, filtersDiv);
   }
   currentDT = dt;                      // save reference for next tab change
   window.allRows = dt.rows().data().toArray();              // snapshot of full data
@@ -508,8 +554,23 @@ async function openTab(table){
       else delete filters[col];
       dt.column(i).search(select.value).draw();
     };
-    filtersDiv.appendChild(select);
+  filtersDiv.appendChild(select);
   });
+
+  // After DataTable is initialized, if columns were hidden by default, also hide their filters
+  if(columns.length > 15) {
+    const filterSelects = document.querySelectorAll('#filters select');
+    columns.forEach((col, idx) => {
+        if(idx >= 10 && filterSelects[idx]) {
+            filterSelects[idx].style.display = 'none';
+            // Also uncheck the corresponding checkbox
+            const checkboxes = document.querySelectorAll('#column-dropdown input[type="checkbox"]');
+            if(checkboxes[idx]) {
+                checkboxes[idx].checked = false;
+            }
+        }
+    });
+  }
 
 }
 
