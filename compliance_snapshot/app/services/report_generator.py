@@ -271,3 +271,177 @@ def generate_trend_insights(trend_data: Dict) -> str:
 def generate_fallback_trend_insights(trend_data: Dict) -> str:
     return "Trend analysis not available."
 
+
+def generate_safety_inbox_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
+    """Generate Safety Inbox Events summary statistics."""
+    cols = _standardize_columns(df)
+
+    # Normalize column names we'll be using
+    event_type_col = cols.get("event_type")
+    status_col = cols.get("status")
+    driver_tags_col = cols.get("driver_tags")
+    time_col = cols.get("time")
+
+    # Filter to current week if time column exists
+    if time_col:
+        df["time"] = pd.to_datetime(df[time_col], errors='coerce')
+        current_start = pd.Timestamp(_monday_of(trend_end_date))
+        previous_start = current_start - pd.Timedelta(weeks=1)
+
+        current_week = df[(df["time"] >= current_start) & (df["time"] <= current_start + pd.Timedelta(days=6))]
+        previous_week = df[(df["time"] >= previous_start) & (df["time"] < current_start)]
+    else:
+        # If no time column, use all data
+        current_week = df
+        previous_week = pd.DataFrame()  # Empty for comparison
+
+    # Total events
+    total_current = len(current_week)
+    total_previous = len(previous_week)
+    total_change = total_current - total_previous
+
+    # Dismissed events
+    dismissed_count = 0
+    if status_col and 'dismissed' in current_week[status_col].str.lower().values:
+        dismissed_count = (current_week[status_col].str.lower() == 'dismissed').sum()
+
+    # Region breakdown
+    region_lookup = {
+        "great lakes": "Great Lakes",
+        "ohio valley": "Ohio Valley",
+        "midwest": "Midwest",
+        "southeast": "Southeast",
+        "corporate": "Corporate",
+    }
+
+    by_region = {}
+    if driver_tags_col:
+        for region_key, region_name in region_lookup.items():
+            mask = current_week[driver_tags_col].astype(str).str.lower().str.contains(region_key.replace(" ", "|"), na=False)
+            count = mask.sum()
+            if count > 0:
+                by_region[region_name] = int(count)
+
+    # Event type breakdown
+    event_breakdown = {}
+    if event_type_col:
+        # Normalize event types
+        current_week['event_type_normalized'] = current_week[event_type_col].astype(str).str.strip()
+        event_counts = current_week['event_type_normalized'].value_counts()
+
+        # Map to standard event names
+        event_mapping = {
+            'crash': 'Crash',
+            'defensive driving': 'Defensive Driving',
+            'following distance': 'Following Distance',
+            'forward collision warning': 'Forward Collision Warning',
+            'harsh accel': 'Harsh Accel',
+            'harsh brake': 'Harsh Brake',
+            'harsh turn': 'Harsh Turn',
+            'inattentive driving': 'Inattentive Driving',
+        }
+
+        for event, count in event_counts.items():
+            event_lower = event.lower()
+            for key, display_name in event_mapping.items():
+                if key in event_lower:
+                    # Check if dismissed
+                    if status_col:
+                        dismissed = (
+                            (current_week['event_type_normalized'] == event)
+                            & (current_week[status_col].str.lower() == 'dismissed')
+                        ).sum()
+                        if dismissed == count:
+                            event_breakdown[display_name] = f"{count} (dismissed)"
+                        else:
+                            event_breakdown[display_name] = str(count)
+                    else:
+                        event_breakdown[display_name] = str(count)
+                    break
+
+    # Fill in missing event types with 0
+    all_event_types = [
+        'Crash',
+        'Defensive Driving',
+        'Following Distance',
+        'Forward Collision Warning',
+        'Harsh Accel',
+        'Harsh Brake',
+        'Harsh Turn',
+        'Inattentive Driving',
+    ]
+    for event_type in all_event_types:
+        if event_type not in event_breakdown:
+            event_breakdown[event_type] = "0"
+
+    return {
+        "total_current": total_current,
+        "total_change": total_change,
+        "dismissed_count": dismissed_count,
+        "by_region": by_region,
+        "event_breakdown": event_breakdown,
+    }
+
+
+def generate_safety_inbox_insights(summary_data: Dict) -> str:
+    """Generate insights for Safety Inbox Events using OpenAI or fallback."""
+    try:
+        if not os.environ.get("OPEN_API_KEY"):
+            return generate_fallback_safety_inbox_insights(summary_data)
+
+        # Format the data for the prompt
+        region_text = "\n".join([f"   o {region}: {count}" for region, count in summary_data['by_region'].items()])
+        event_text = "\n".join([f"   • {event}: {count}" for event, count in summary_data['event_breakdown'].items()])
+
+        prompt = f"""Analyze this Safety Inbox Events data and provide insights in 2-3 sentences:
+
+        Total Safety Events: {summary_data['total_current']} ({summary_data['total_change']:+})
+        Dismissed: {summary_data['dismissed_count']}
+
+        Breakdown by Region:
+        {region_text}
+
+        Event Breakdown:
+        {event_text}
+
+        Focus on: dismissal patterns, dominant event types, regional distribution, and any concerning trends."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"ERROR in generate_safety_inbox_insights: {e}")
+        return generate_fallback_safety_inbox_insights(summary_data)
+
+
+def generate_fallback_safety_inbox_insights(summary_data: Dict) -> str:
+    """Fallback insights for Safety Inbox when OpenAI is unavailable."""
+    total = summary_data['total_current']
+    dismissed = summary_data['dismissed_count']
+
+    # Find dominant event type
+    event_breakdown = summary_data['event_breakdown']
+    non_zero_events = [(k, v) for k, v in event_breakdown.items() if v != "0" and "dismissed" not in v]
+
+    if dismissed == total and total > 0:
+        insights = f"All {total} safety events this week were dismissed, indicating no actionable violations. "
+    else:
+        insights = f"Of {total} total safety events, {dismissed} were dismissed. "
+
+    if non_zero_events:
+        dominant_event = max(non_zero_events, key=lambda x: int(x[1].split()[0]))
+        insights += f"The most common event type was {dominant_event[0]} with {dominant_event[1]} occurrences. "
+
+    # Regional distribution
+    regions = list(summary_data['by_region'].keys())
+    if len(regions) > 1:
+        insights += f"Events were distributed across {', '.join(regions[:-1])} and {regions[-1]}."
+    elif regions:
+        insights += f"All events occurred in the {regions[0]} region."
+
+    return insights
+
