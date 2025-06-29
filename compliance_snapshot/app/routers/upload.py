@@ -1,16 +1,14 @@
 from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import uuid
 import json
 
-from ..core.utils import save_uploads, sanitize_for_sql
+from ..core.utils import save_uploads, sanitize_for_sql, file_response
 from ..services.processors import file_detector
 import sqlite3
-import pandas as pd
 import logging
-import json
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -104,10 +102,10 @@ async def download(ticket: str):
         raise HTTPException(status_code=404, detail="snapshot not found")
 
     # FastAPI adds 'attachment' disposition when filename is provided
-    return FileResponse(
-        path=pdf_path,
-        media_type="application/pdf",
+    return file_response(
+        pdf_path,
         filename=f"DOT_Compliance_{ticket[:8]}.pdf",
+        media_type="application/pdf",
     )
 
 

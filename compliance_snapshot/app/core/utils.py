@@ -1,5 +1,5 @@
 from pathlib import Path
-from fastapi import UploadFile
+from fastapi import UploadFile, Response
 import pandas as pd
 import datetime
 
@@ -50,4 +50,18 @@ def sanitize_for_sql(df: pd.DataFrame) -> pd.DataFrame:
         ).any():
             df[col] = df[col].apply(lambda x: _hms(x) if isinstance(x, datetime.timedelta) else x)
     return df
+
+
+def file_response(path: Path, *, filename: str, media_type: str = "application/octet-stream") -> Response:
+    """Return a ``Response`` with the contents of ``path``.
+
+    ``FileResponse`` occasionally miscalculates ``Content-Length`` when the file
+    is generated just before returning. Reading the file into memory ensures the
+    length header matches the actual content sent.
+    """
+    data = path.read_bytes()
+    headers = {
+        "Content-Disposition": f"attachment; filename={filename}",
+    }
+    return Response(content=data, media_type=media_type, headers=headers)
 
