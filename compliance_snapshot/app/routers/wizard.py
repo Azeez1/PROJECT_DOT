@@ -2,20 +2,28 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
-    FileResponse,
 )
 from fastapi.templating import Jinja2Templates
 import sqlite3
 import json
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
-import json
+from ..core.utils import file_response
 
 router = APIRouter()
 templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
-_db = lambda t: Path(f"/tmp/{t}/snapshot.db")
-_summary = lambda t: Path(f"/tmp/{t}/summary.json")
-_err = lambda t: Path(f"/tmp/{t}/errors.json")
+
+
+def _db(ticket: str) -> Path:
+    return Path(f"/tmp/{ticket}/snapshot.db")
+
+
+def _summary(ticket: str) -> Path:
+    return Path(f"/tmp/{ticket}/summary.json")
+
+
+def _err(ticket: str) -> Path:
+    return Path(f"/tmp/{ticket}/errors.json")
 @router.get("/wizard/{ticket}", response_class=HTMLResponse)
 async def wizard(request: Request, ticket: str):
     if not _db(ticket).exists():
@@ -87,8 +95,8 @@ async def finalize(wiz_id: str, request: Request):
     trend_end = payload.get("trend_end")
 
     pdf_path = build_pdf(wiz_id, filters=filters, trend_end=trend_end)
-    return FileResponse(
-        path=pdf_path,
-        media_type="application/pdf",
+    return file_response(
+        pdf_path,
         filename=f"DOT_Compliance_{wiz_id[:8]}.pdf",
+        media_type="application/pdf",
     )
