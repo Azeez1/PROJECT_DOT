@@ -34,32 +34,48 @@ def parse_duration(duration_str: str) -> float:
 def process_personnel_conveyance(df: pd.DataFrame) -> pd.DataFrame:
     """Process Personnel Conveyance Report data."""
     # Normalize column names
-    df.columns = [c.strip().lower().replace(" ", "_").replace("(", "").replace(")", "") for c in df.columns]
+    df.columns = [
+        c.strip().lower().replace(" ", "_").replace("(", "").replace(")", "")
+        for c in df.columns
+    ]
+
+    # Identify driver and duration columns flexibly
+    driver_col = None
+    duration_col = None
+    for col in df.columns:
+        col_lower = col.lower()
+        if "driver" in col_lower and not driver_col:
+            driver_col = col
+        if (
+            ("personal" in col_lower and "conveyance" in col_lower)
+            or ("pc" in col_lower and "duration" in col_lower)
+        ) and "duration" in col_lower:
+            duration_col = col
+
+    if not driver_col or not duration_col:
+        raise ValueError(
+            f"Missing required columns. Found columns: {list(df.columns)}"
+        )
+
+    # Rename to standard names for processing
+    df = df.rename(
+        columns={
+            driver_col: "driver_name",
+            duration_col: "personal_conveyance_duration",
+        }
+    )
 
     # Convert timedelta objects to string format HH:MM:SS
     for col in df.columns:
-        if df[col].dtype == 'timedelta64[ns]':
-            df[col] = df[col].apply(lambda x: str(x).split(' ')[-1].split('.')[0] if pd.notna(x) else '')
+        if df[col].dtype == "timedelta64[ns]":
+            df[col] = df[col].apply(
+                lambda x: str(x).split(" ")[-1].split(".")[0] if pd.notna(x) else ""
+            )
 
-    # Also specifically check the duration column
-    duration_col = None
-    for col in df.columns:
-        if 'duration' in col and 'personal' in col:
-            duration_col = col
-            break
-
-    if duration_col:
-        df[duration_col] = df[duration_col].apply(lambda x: str(x).split(' ')[-1].split('.')[0] if pd.notna(x) else '')
-
-    # Expected columns
-    expected_cols = [
-        'date', 'driver_name', 'eld_exempt', 'eld_exempt_reason',
-        'personal_conveyance_duration', 'tags', 'comments'
-    ]
-
-    # Check if this looks like a personnel conveyance report
-    if 'driver_name' not in df.columns or 'personal_conveyance_duration' not in df.columns:
-        raise ValueError("Missing required columns for Personnel Conveyance report")
+    if "personal_conveyance_duration" in df.columns:
+        df["personal_conveyance_duration"] = df["personal_conveyance_duration"].apply(
+            lambda x: str(x).split(" ")[-1].split(".")[0] if pd.notna(x) else ""
+        )
 
     # Convert date column
     if 'date' in df.columns:
