@@ -111,7 +111,7 @@ def make_chart(df, chart_type: str, out_path: Path, title: str | None = None) ->
         plt.title(title)
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(out_path, dpi=200)
+    plt.savefig(out_path, dpi=300)
     plt.close()
 
 
@@ -146,7 +146,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
         .reindex(columns=desired_types, fill_value=0)
     )
 
-    fig, ax = plt.subplots(figsize=(6, 3))
+    fig, ax = plt.subplots(figsize=(8, 5))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
 
@@ -186,7 +186,7 @@ def make_stacked_bar(df: pd.DataFrame, out_path: Path) -> Path:
     plt.xticks(rotation=0)
     plt.subplots_adjust(right=0.8)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(out_path, dpi=200)
+    plt.savefig(out_path, dpi=300)
     plt.close()
     return out_path
 
@@ -381,7 +381,7 @@ def make_trend_line(
         )
 
     colors = [VIOLATION_COLORS.get(col, "#CCCCCC") for col in pivot.columns]
-    fig, ax = plt.subplots(figsize=(7, 4))
+    fig, ax = plt.subplots(figsize=(9, 5))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
 
@@ -428,7 +428,7 @@ def make_trend_line(
 
     plt.subplots_adjust(right=0.8)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.savefig(out_path, dpi=200)
+    plt.savefig(out_path, dpi=300)
     plt.close()
     return out_path
 
@@ -442,12 +442,12 @@ def make_safety_events_bar(df: pd.DataFrame, out_path: Path) -> Path:
     tags_col = cols.get("driver_tags")
 
     if not event_type_col or not tags_col:
-        fig, ax = plt.subplots(figsize=(4, 2.5))
+        fig, ax = plt.subplots(figsize=(8, 5))
         fig.patch.set_facecolor("#2B2B2B")
         ax.set_facecolor("#2B2B2B")
         ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
         ax.axis("off")
-        plt.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
         plt.close()
         return out_path
 
@@ -461,7 +461,7 @@ def make_safety_events_bar(df: pd.DataFrame, out_path: Path) -> Path:
     df["Region"] = df[tags_col].astype(str).str.strip().str.lower().map(region_lookup)
     region_counts = df.groupby("Region").size()
 
-    fig, ax = plt.subplots(figsize=(4, 2.5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
 
@@ -493,7 +493,7 @@ def make_safety_events_bar(df: pd.DataFrame, out_path: Path) -> Path:
     ax.legend(loc='upper right', frameon=False, labelcolor='white', fontsize=8)
 
     plt.tight_layout()
-    plt.savefig(out_path, dpi=200, bbox_inches='tight', facecolor="#2B2B2B")
+    plt.savefig(out_path, dpi=300, bbox_inches='tight', facecolor="#2B2B2B")
     plt.close()
     return out_path
 
@@ -507,18 +507,18 @@ def make_unassigned_segments_visual(df: pd.DataFrame, out_path: Path) -> Path:
     segments_col = cols.get("unassigned_segments")
 
     if not vehicle_col or not segments_col:
-        fig, ax = plt.subplots(figsize=(6, 2.5))
+        fig, ax = plt.subplots(figsize=(10, 5))
         fig.patch.set_facecolor("#2B2B2B")
         ax.set_facecolor("#2B2B2B")
         ax.text(0.5, 0.5, "No unassigned segments data", ha="center", va="center", color="white")
         ax.axis("off")
-        plt.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
         plt.close()
         return out_path
 
     vehicle_segments = df.groupby(vehicle_col)[segments_col].sum().nlargest(4)
 
-    fig, ax = plt.subplots(figsize=(6, 2.5))
+    fig, ax = plt.subplots(figsize=(10, 5))
     fig.patch.set_facecolor("#2B2B2B")
     ax.set_facecolor("#2B2B2B")
 
@@ -539,20 +539,20 @@ def make_unassigned_segments_visual(df: pd.DataFrame, out_path: Path) -> Path:
             ax.scatter(x, y_positions[i], s=100, c=colors[i], marker='o')
 
         ax.text(0.02, y_positions[i], f"{vehicle_id} - {driver}",
-                va='center', ha='right', color=colors[i], fontsize=9, fontweight='bold')
+                va='center', ha='right', color=colors[i], fontsize=12, fontweight='bold')
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis('off')
 
-    ax.set_title("Unassigned Driving Segments", color="white", pad=10, loc='left')
+    ax.set_title("Unassigned Driving Segments", color="white", pad=10, loc='left', fontsize=16)
 
     total = int(vehicle_segments.sum())
     ax.text(0.5, 0.05, f"TOTAL EVENTS: {total}", ha='center',
-            color="white", fontweight='bold', fontsize=10)
+            color="white", fontweight='bold', fontsize=14)
 
     plt.tight_layout()
-    plt.savefig(out_path, dpi=200, bbox_inches='tight', facecolor="#2B2B2B")
+    plt.savefig(out_path, dpi=300, bbox_inches='tight', facecolor="#2B2B2B")
     plt.close()
     return out_path
 
@@ -566,7 +566,7 @@ def make_speeding_pie_chart(df: pd.DataFrame, out_path: Path) -> Path:
     heavy_count = 0
     severe_count = 8
 
-    fig, ax = plt.subplots(figsize=(3, 3))
+    fig, ax = plt.subplots(figsize=(6, 6))
     fig.patch.set_facecolor("#2B2B2B")
 
     sizes = [light_count, moderate_count, heavy_count, severe_count]
@@ -579,13 +579,13 @@ def make_speeding_pie_chart(df: pd.DataFrame, out_path: Path) -> Path:
 
     for text in texts:
         text.set_color('white')
-        text.set_fontsize(9)
+        text.set_fontsize(12)
 
     for autotext in autotexts:
         autotext.set_color('white')
-        autotext.set_fontsize(8)
+        autotext.set_fontsize(11)
 
-    ax.set_title("Speeding Events", color="white", pad=10)
+    ax.set_title("Speeding Events", color="white", pad=10, fontsize=16)
 
     total = sum(sizes)
     ax.text(0, -1.3, f"TOTAL: {total}", ha='center', color="white",
@@ -593,9 +593,9 @@ def make_speeding_pie_chart(df: pd.DataFrame, out_path: Path) -> Path:
 
     legend_labels = [f"{label} - {count}" for label, count in zip(labels, sizes)]
     ax.legend(wedges, legend_labels, loc="center left", bbox_to_anchor=(1, 0, 0.5, 1),
-              frameon=False, labelcolor='white', fontsize=8)
+              frameon=False, labelcolor='white', fontsize=11)
 
     plt.tight_layout()
-    plt.savefig(out_path, dpi=200, bbox_inches='tight', facecolor="#2B2B2B")
+    plt.savefig(out_path, dpi=300, bbox_inches='tight', facecolor="#2B2B2B")
     plt.close()
     return out_path

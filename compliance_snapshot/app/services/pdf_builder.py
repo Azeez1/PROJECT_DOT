@@ -65,6 +65,7 @@ def build_pdf(
     filters: dict | None = None,
     trend_end: str | None = None,
     include_table: bool = False,
+    create_dashboard: bool = False,
 ) -> Path:
     tmpdir = Path(f"/tmp/{wiz_id}")
     out_path = tmpdir / "ComplianceSnapshot.pdf"
@@ -244,19 +245,94 @@ def build_pdf(
     story.append(fleet_snapshot_title)
     story.append(Spacer(1, 20))
 
-    # Dashboard charts arranged in 2x3 grid
-    from reportlab.platypus import Table as RLTable
+    chart_paths = {
+        "hos_violation": bar_path,
+        "trend": trend_path,
+        "safety_events": safety_chart_path,
+        "unassigned_segments": unassigned_chart_path,
+        "speeding_events": speeding_chart_path,
+    }
 
-    dashboard_data = [
-        [Image(str(bar_path), width=250, height=160), Image(str(trend_path), width=250, height=160)],
-        [Image(str(safety_chart_path), width=250, height=160), Image(str(unassigned_chart_path), width=250, height=160)],
-        [Image(str(speeding_chart_path), width=250, height=160), Spacer(1, 160)],
-    ]
+    if create_dashboard:
+        story.append(Paragraph("<b>Visual Dashboard</b>", section_title_style))
+        story.append(Spacer(1, 20))
 
-    dashboard_table = RLTable(dashboard_data, colWidths=[doc.width * 0.5, doc.width * 0.5])
-    story.append(dashboard_table)
+        chart_data = []
+        row1 = []
+        row2 = []
+        row3 = []
 
-    # Force page break to start Page 2
+        if "hos_violation" in chart_paths:
+            row1.append(Image(str(chart_paths["hos_violation"]), width=3.5 * inch, height=2 * inch))
+        if "trend" in chart_paths:
+            row1.append(Image(str(chart_paths["trend"]), width=3.5 * inch, height=2 * inch))
+
+        if "safety_events" in chart_paths:
+            row2.append(Image(str(chart_paths["safety_events"]), width=3.5 * inch, height=2 * inch))
+        if "unassigned_segments" in chart_paths:
+            row2.append(Image(str(chart_paths["unassigned_segments"]), width=3.5 * inch, height=2 * inch))
+
+        if "speeding_events" in chart_paths:
+            row3.append(Image(str(chart_paths["speeding_events"]), width=3.5 * inch, height=2 * inch))
+        row3.append(Spacer(3.5 * inch, 2 * inch))
+
+        chart_data = [row1, row2, row3] if row1 else []
+
+        if chart_data:
+            chart_table = Table(chart_data, colWidths=[3.5 * inch, 3.5 * inch])
+            chart_table.setStyle(RLTableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            story.append(chart_table)
+
+        story.append(PageBreak())
+
+    # PAGE 1: HOS Violations Charts
+    story.append(Paragraph("<b>HOS Violations Analysis</b>", section_title_style))
+    story.append(Spacer(1, 20))
+
+    if "hos_violation" in chart_paths:
+        img = Image(str(chart_paths["hos_violation"]), width=5 * inch, height=3 * inch)
+        story.append(img)
+        story.append(Spacer(1, 20))
+
+    if "trend" in chart_paths:
+        img = Image(str(chart_paths["trend"]), width=5 * inch, height=3 * inch)
+        story.append(img)
+
+    story.append(PageBreak())
+
+    # PAGE 2: Safety Events and Unassigned Driving
+    story.append(Paragraph("<b>Safety Events and Unassigned Driving Analysis</b>", section_title_style))
+    story.append(Spacer(1, 20))
+
+    if "safety_events" in chart_paths:
+        img = Image(str(chart_paths["safety_events"]), width=5 * inch, height=3 * inch)
+        story.append(img)
+        story.append(Spacer(1, 30))
+
+    if "unassigned_segments" in chart_paths:
+        img = Image(str(chart_paths["unassigned_segments"]), width=6 * inch, height=3 * inch)
+        story.append(img)
+
+    story.append(PageBreak())
+
+    # PAGE 3: Speeding Analysis
+    story.append(Paragraph("<b>Speeding Events Analysis</b>", section_title_style))
+    story.append(Spacer(1, 20))
+
+    if "speeding_events" in chart_paths:
+        img = Image(str(chart_paths["speeding_events"]), width=4 * inch, height=4 * inch)
+        data = [[img]]
+        t = Table(data, colWidths=[doc.width])
+        t.setStyle(RLTableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+        story.append(t)
+
     story.append(PageBreak())
 
     # HOS Violations Summary section
@@ -559,6 +635,15 @@ def build_pdf(
         speeding_data if 'speeding_data' in locals() else None,
         dvir_data if 'dvir_data' in locals() else None,
     )
+
+    risk_assessment = risk_assessment.replace('####', '')
+    risk_assessment = re.sub(
+        r"(overall DOT risk level is assessed as\s*)(High|Medium|Low)",
+        lambda m: m.group(1) + f"<b>{m.group(2)}</b>",
+        risk_assessment,
+        flags=re.IGNORECASE,
+    )
+    risk_assessment = convert_html_to_reportlab(risk_assessment)
 
     story.append(Paragraph(risk_assessment, styles['Normal']))
 
