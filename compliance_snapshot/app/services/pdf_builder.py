@@ -32,6 +32,7 @@ from .report_generator import (
 from .visualizations.chart_factory import (
     make_stacked_bar,
     make_trend_line,
+    make_unassigned_bar_chart,
     make_pc_usage_bar_chart,
 )
 
@@ -312,13 +313,12 @@ def build_pdf(
                     unassigned_df, end_date or pd.Timestamp.utcnow().date()
                 )
 
-
-                # Unassigned driving chart removed per new requirements
-                # if unassigned_data.get('region_data'):
-                #     unassigned_bar_path = make_unassigned_bar_chart(
-                #         unassigned_df, tmpdir / "unassigned_bar.png"
-                #     )
-                #     story.append(Image(str(unassigned_bar_path), width=450, height=300))
+                # Only add chart if we have regional data
+                if unassigned_data.get('region_data'):
+                    unassigned_bar_path = make_unassigned_bar_chart(
+                        unassigned_df, tmpdir / "unassigned_bar.png"
+                    )
+                    story.append(Image(str(unassigned_bar_path), width=450, height=300))
 
                 # Add insights regardless
                 story.append(Spacer(1, 20))
