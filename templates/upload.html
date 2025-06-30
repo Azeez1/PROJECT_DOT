@@ -352,30 +352,51 @@
             displayFiles();
         }
         
-        uploadForm.addEventListener('submit', function(e) {
-            // Don't prevent default - let the form submit normally
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
             if (selectedFiles.length === 0) {
-                e.preventDefault();
                 alert('Please select files to upload');
                 return;
             }
 
-            // Clear the original file input
-            fileInput.value = '';
-            
-            // Add each selected file to the form
-            const dt = new DataTransfer();
+            // Create FormData with actual files
+            const formData = new FormData();
             selectedFiles.forEach(file => {
-                dt.items.add(file);
+                formData.append('files', file);
             });
-            fileInput.files = dt.files;
 
-            // Show loading
             loading.style.display = 'block';
             uploadForm.style.display = 'none';
 
-            // Let the form submit naturally
-            return true;
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok || response.redirected) {
+                    const finalUrl = response.url;
+                    if (finalUrl.includes('/wizard/')) {
+                        window.location.href = finalUrl;
+                    } else {
+                        const text = await response.text();
+                        const ticketMatch = text.match(/\/wizard\/([a-f0-9]{32})/);
+                        if (ticketMatch) {
+                            window.location.href = `/wizard/${ticketMatch[1]}`;
+                        } else {
+                            throw new Error('Could not determine redirect location');
+                        }
+                    }
+                } else {
+                    throw new Error(`Upload failed with status: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                loading.style.display = 'none';
+                uploadForm.style.display = 'block';
+                alert('Upload failed: ' + error.message);
+            }
         });
     </script>
 </body>
