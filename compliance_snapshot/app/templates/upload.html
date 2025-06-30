@@ -356,21 +356,59 @@
         }
 
         uploadForm.addEventListener('submit', function(e) {
+            // Always prevent default first
+            e.preventDefault();
+
             if (selectedFiles.length === 0) {
-                e.preventDefault();
                 alert('Please select files to upload');
                 return;
             }
 
-            // Update the file input with selected files
-            const dt = new DataTransfer();
-            selectedFiles.forEach(file => dt.items.add(file));
-            fileInput.files = dt.files;
+            // Create a new FormData with our selected files
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
 
             loading.style.display = 'block';
             uploadForm.style.display = 'none';
 
-            // Let the form submit normally - no fetch, no preventDefault
+            // Use XMLHttpRequest for better compatibility
+            const xhr = new XMLHttpRequest();
+
+            xhr.onload = function() {
+                if (xhr.status === 200 || xhr.status === 303) {
+                    // Follow redirect
+                    const redirectUrl = xhr.getResponseHeader('Location') || xhr.responseURL;
+                    if (redirectUrl) {
+                        window.location.href = redirectUrl;
+                    } else {
+                        // Try to parse response for redirect
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                            }
+                        } catch (e) {
+                            // If all else fails, go to wizard with a guess at the ticket
+                            window.location.href = '/wizard/processing';
+                        }
+                    }
+                } else {
+                    loading.style.display = 'none';
+                    uploadForm.style.display = 'block';
+                    alert('Upload failed. Please try again.');
+                }
+            };
+
+            xhr.onerror = function() {
+                loading.style.display = 'none';
+                uploadForm.style.display = 'block';
+                alert('Upload failed. Please try again.');
+            };
+
+            xhr.open('POST', '/generate');
+            xhr.send(formData);
         });
         // Helper function to create FileList
         function createFileList(files) {
