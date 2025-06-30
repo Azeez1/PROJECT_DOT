@@ -73,6 +73,8 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         report_type = 'mistdvi'
     elif any('driver' in col and 'behavior' in col for col in cols_norm):
         report_type = 'driver_behaviors'
+    elif any('driver' in col and 'safety' in col for col in cols_norm) and any('rank' in col for col in cols_norm) and not any('harsh' in col or 'speeding' in col for col in cols_norm) and not any('behavior' in col for col in cols_norm):
+        report_type = 'driver_safety'
     elif any('safety score' in col for col in cols_norm) and any('driver name' in col for col in cols_norm):
         # If we have safety score and driver name, it's likely a safety behavior report
         report_type = 'driver_behaviors'
@@ -81,6 +83,8 @@ def detect_report_type(filepath: Path) -> Tuple[Optional[str], pd.DataFrame]:
         if any('driver' in col for col in cols_norm):
             report_type = 'driver_behaviors'
     elif any('driver' in col and 'safety' in col and 'score' in col for col in cols_norm):
+        report_type = 'driver_safety'
+    elif any('safety score' in col for col in cols_norm) and any('drive time' in col for col in cols_norm):
         report_type = 'driver_safety'
     elif any('trip id' in col or 'trip_id' in col for col in cols_norm):
         if any('vehicle' in col for col in cols_norm) and any('driver' in col for col in cols_norm):
