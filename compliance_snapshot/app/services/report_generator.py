@@ -809,3 +809,183 @@ def generate_unassigned_segment_details(summary_data: Dict) -> str:
     insights += "and reinforce the need for login adherence, especially for frequently used or reassigned vehicles."
 
     return insights
+
+
+def generate_speeding_analysis_summary(behaviors_df: pd.DataFrame, safety_df: pd.DataFrame, trend_end_date: date) -> Dict:
+    """Generate Driver Behavior & Speeding Analysis summary from both reports."""
+    total_events = 0
+    harsh_turn_count = 0
+    speeding_by_region = {}
+
+    # ----- Process Driver Behaviors Report -----
+    if not behaviors_df.empty:
+        cols = _standardize_columns(behaviors_df)
+
+        # Look for harsh turn column in behaviors data
+        for col in behaviors_df.columns:
+            if 'harsh' in col.lower() and 'turn' in col.lower():
+                harsh_turn_count += int(behaviors_df[col].sum())
+                break
+
+        heavy_col = None
+        severe_col = None
+        for col in behaviors_df.columns:
+            col_lower = col.lower()
+            if 'heavy' in col_lower and 'speed' in col_lower:
+                heavy_col = col
+            elif 'severe' in col_lower and 'speed' in col_lower:
+                severe_col = col
+
+        tags_col = cols.get('tags')
+        if tags_col:
+            region_mapping = {
+                'great lakes': 'Great Lakes',
+                'ohio valley': 'Ohio Valley',
+                'southeast': 'Southeast',
+                'gl': 'Great Lakes',
+                'ov': 'Ohio Valley',
+                'se': 'Southeast'
+            }
+
+            for region_key, region_name in region_mapping.items():
+                mask = behaviors_df[tags_col].str.lower().str.contains(region_key, na=False)
+                if mask.any():
+                    region_df = behaviors_df[mask]
+                    heavy_count = 0
+                    severe_count = 0
+
+                    if heavy_col and heavy_col in region_df.columns:
+                        for val in region_df[heavy_col]:
+                            if pd.notna(val) and str(val).strip() and str(val) != '0' and str(val) != '00:00:00':
+                                heavy_count += 1
+
+                    if severe_col and severe_col in region_df.columns:
+                        for val in region_df[severe_col]:
+                            if pd.notna(val) and str(val).strip() and str(val) != '0' and str(val) != '00:00:00':
+                                severe_count += 1
+
+                    speeding_by_region[region_name] = speeding_by_region.get(region_name, 0) + heavy_count + severe_count
+                    total_events += heavy_count + severe_count
+
+    # ----- Process Driver Safety Report -----
+    if not safety_df.empty:
+        for col in safety_df.columns:
+            if 'harsh' in col.lower() and 'turn' in col.lower():
+                harsh_turn_count += int(safety_df[col].sum())
+
+    return {
+        'total_speeding_events': total_events,
+        'harsh_turn_incidents': harsh_turn_count,
+        'speeding_by_region': speeding_by_region
+    }
+
+
+def generate_speeding_analysis_insights(summary_data: Dict) -> str:
+    """Generate insights for Driver Behavior & Speeding Analysis."""
+    total = summary_data.get('total_speeding_events', 0)
+    harsh_turns = summary_data.get('harsh_turn_incidents', 0)
+    by_region = summary_data.get('speeding_by_region', {})
+
+    insights = f"A total of {total} high-risk speeding events were recorded this week, "
+    insights += f"with {'no' if harsh_turns == 0 else harsh_turns} harsh turn incident{'s' if harsh_turns != 1 else ''} reported. "
+
+    if by_region:
+        sorted_regions = sorted(by_region.items(), key=lambda x: x[1], reverse=True)
+        if sorted_regions:
+            top_region = sorted_regions[0]
+            insights += f"The {top_region[0]} region led with {top_region[1]} severe or heavy speeding events"
+
+            if len(sorted_regions) > 1:
+                other_regions = []
+                for region, count in sorted_regions[1:3]:
+                    other_regions.append(f"{region} ({count})")
+                insights += f", followed by {' and '.join(other_regions)}"
+
+            insights += ". "
+
+    if harsh_turns == 0:
+        insights += "While the absence of harsh turns is encouraging, "
+
+    insights += "the volume of heavy and severe speeding suggests a continued need for targeted coaching and stricter speed management across all regions."
+
+    return insights
+
+
+def generate_missed_dvir_summary(df: pd.DataFrame, trend_end_date: date) -> Dict:
+    """Generate Missed DVIR summary statistics."""
+    cols = _standardize_columns(df)
+
+    driver_col = cols.get('driver')
+    type_col = cols.get('type')
+
+    if not driver_col:
+        for col in df.columns:
+            if 'driver' in col.lower():
+                driver_col = col
+                break
+
+    total_missed = len(df)
+    total_pre_trip = 0
+    total_post_trip = 0
+
+    if type_col:
+        for val in df[type_col]:
+            val_lower = str(val).lower()
+            if 'pre' in val_lower:
+                total_pre_trip += 1
+            elif 'post' in val_lower:
+                total_post_trip += 1
+
+    top_drivers = []
+    if driver_col:
+        driver_counts = df[driver_col].value_counts()
+
+        for driver, total in driver_counts.head(15).items():
+            driver_df = df[df[driver_col] == driver]
+            pre_count = 0
+            post_count = 0
+
+            if type_col:
+                for val in driver_df[type_col]:
+                    val_lower = str(val).lower()
+                    if 'pre' in val_lower:
+                        pre_count += 1
+                    elif 'post' in val_lower:
+                        post_count += 1
+
+            top_drivers.append({
+                'driver': driver,
+                'total': int(total),
+                'pre_trip': pre_count,
+                'post_trip': post_count
+            })
+
+    return {
+        'total_missed': total_missed,
+        'total_pre_trip': total_pre_trip,
+        'total_post_trip': total_post_trip,
+        'top_drivers': top_drivers
+    }
+
+
+def generate_missed_dvir_insights(summary_data: Dict) -> str:
+    """Generate insights for Missed DVIRs."""
+    total = summary_data.get('total_missed', 0)
+    post_trips = summary_data.get('total_post_trip', 0)
+    pre_trips = summary_data.get('total_pre_trip', 0)
+    top_drivers = summary_data.get('top_drivers', [])
+
+    insights = f"A total of {total} missed DVIRs were recorded this week, "
+    insights += f"with {post_trips} post-trips and {pre_trips} pre-trips missed. "
+
+    if top_drivers:
+        top_4 = top_drivers[:4]
+        driver_list = []
+        for driver_data in top_4:
+            driver_list.append(f"{driver_data['driver']} ({driver_data['total']})")
+
+        insights += f"The most frequent offenders were {', '.join(driver_list[:-1])}, and {driver_list[-1]}. "
+
+    insights += "Continued gaps in both start-of-day and end-of-day inspections highlight a need for renewed emphasis on driver accountability and routine DVIR training to ensure FMCSA compliance and fleet safety."
+
+    return insights
