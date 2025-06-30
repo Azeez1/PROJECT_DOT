@@ -355,51 +355,22 @@
             });
         }
 
-        uploadForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
+        uploadForm.addEventListener('submit', function(e) {
             if (selectedFiles.length === 0) {
+                e.preventDefault();
                 alert('Please select files to upload');
                 return;
             }
 
-            const formData = new FormData();
-            selectedFiles.forEach(file => {
-                formData.append('files', file);
-            });
+            // Update the file input with selected files
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
 
             loading.style.display = 'block';
             uploadForm.style.display = 'none';
 
-            try {
-                const response = await fetch('/generate', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok || response.redirected) {
-                    // Handle the redirect properly
-                    const finalUrl = response.url;
-                    if (finalUrl.includes('/wizard/')) {
-                        window.location.href = finalUrl;
-                    } else {
-                        const data = await response.json();
-                        if (data.redirect) {
-                            window.location.href = data.redirect;
-                        } else {
-                            throw new Error('No redirect URL provided');
-                        }
-                    }
-                } else {
-                    const error = await response.text();
-                    throw new Error(`Upload failed: ${error}`);
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                loading.style.display = 'none';
-                uploadForm.style.display = 'block';
-                alert('Upload failed: ' + error.message);
-            }
+            // Let the form submit normally - no fetch, no preventDefault
         });
         // Helper function to create FileList
         function createFileList(files) {
