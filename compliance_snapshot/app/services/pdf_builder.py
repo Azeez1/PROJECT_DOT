@@ -33,6 +33,9 @@ from .visualizations.chart_factory import (
     make_stacked_bar,
     make_trend_line,
     make_pc_usage_bar_chart,
+    make_safety_events_bar,
+    make_unassigned_segments_visual,
+    make_speeding_pie_chart,
 )
 
 import re
@@ -78,9 +81,55 @@ def build_pdf(
     else:
         table_data = []
 
+    # placeholders for later sections
+    safety_inbox_data = None
+    pc_data = None
+    unassigned_data = None
+    speeding_data = None
+    dvir_data = None
+
     end_date = pd.to_datetime(trend_end).date() if trend_end else None
     bar_path = make_stacked_bar(df, tmpdir / "bar.png")
     trend_path = make_trend_line(df, end_date, tmpdir / "trend.png")
+
+    # Generate additional dashboard charts
+    try:
+        safety_df = load_data(wiz_id, "safety_inbox")
+    except Exception as e:
+        print(f"Error loading safety inbox data for chart: {e}")
+        safety_df = pd.DataFrame()
+
+    safety_chart_path = make_safety_events_bar(
+        safety_df, tmpdir / "safety_events.png"
+    )
+
+    try:
+        unassigned_df_chart = load_data(wiz_id, "unassigned_hos")
+    except Exception as e:
+        print(f"Error loading unassigned HOS data for chart: {e}")
+        unassigned_df_chart = pd.DataFrame()
+
+    unassigned_chart_path = make_unassigned_segments_visual(
+        unassigned_df_chart, tmpdir / "unassigned_segments.png"
+    )
+
+    try:
+        driver_behaviors_df_chart = load_data(wiz_id, "driver_behaviors")
+    except Exception:
+        driver_behaviors_df_chart = pd.DataFrame()
+
+    try:
+        mistdvi_df_chart = load_data(wiz_id, "mistdvi")
+    except Exception:
+        mistdvi_df_chart = pd.DataFrame()
+
+    speeding_source_df = (
+        driver_behaviors_df_chart if not driver_behaviors_df_chart.empty else mistdvi_df_chart
+    )
+
+    speeding_chart_path = make_speeding_pie_chart(
+        speeding_source_df, tmpdir / "speeding_events.png"
+    )
 
     summary_data = generate_hos_violations_summary(df, end_date or pd.Timestamp.utcnow().date())
     trend_data = generate_hos_trend_analysis(df, end_date or pd.Timestamp.utcnow().date())
@@ -134,10 +183,17 @@ def build_pdf(
     story.append(Paragraph("COMPLIANCE REPORT", title_style))
     story.append(Spacer(1, 20))
 
-    # Add both charts at the top of the page
-    story.append(Image(str(bar_path), width=350, height=230))
-    story.append(Spacer(1, 12))
-    story.append(Image(str(trend_path), width=350, height=230))
+    # Dashboard charts arranged in 2x3 grid
+    from reportlab.platypus import Table as RLTable
+
+    dashboard_data = [
+        [Image(str(bar_path), width=250, height=160), Image(str(trend_path), width=250, height=160)],
+        [Image(str(safety_chart_path), width=250, height=160), Image(str(unassigned_chart_path), width=250, height=160)],
+        [Image(str(speeding_chart_path), width=250, height=160), Spacer(1, 160)],
+    ]
+
+    dashboard_table = RLTable(dashboard_data, colWidths=[doc.width * 0.5, doc.width * 0.5])
+    story.append(dashboard_table)
 
     # Force page break to start Page 2
     story.append(PageBreak())
@@ -431,6 +487,22 @@ def build_pdf(
 
     except Exception as e:
         print(f"Error loading Missed DVIR data: {e}")
+
+    # Overall DOT Risk Assessment section
+    story.append(PageBreak())
+    story.append(Paragraph("<b>Overall DOT Risk Assessment</b>", section_title_style))
+    story.append(Spacer(1, 20))
+
+    risk_assessment = generate_dot_risk_assessment(
+        summary_data,
+        safety_inbox_data if 'safety_inbox_data' in locals() else None,
+        pc_data if 'pc_data' in locals() else None,
+        unassigned_data if 'unassigned_data' in locals() else None,
+        speeding_data if 'speeding_data' in locals() else None,
+        dvir_data if 'dvir_data' in locals() else None,
+    )
+
+    story.append(Paragraph(risk_assessment, styles['Normal']))
 
     doc.build(story)
     return out_path

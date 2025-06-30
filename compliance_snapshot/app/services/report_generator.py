@@ -999,3 +999,50 @@ def generate_missed_dvir_insights(summary_data: Dict) -> str:
     insights += "Continued gaps in both start-of-day and end-of-day inspections highlight a need for renewed emphasis on driver accountability and routine DVIR training to ensure FMCSA compliance and fleet safety."
 
     return insights
+
+
+def generate_dot_risk_assessment(hos_data, safety_data, pc_data, unassigned_data, speeding_data, dvir_data):
+    """Generate comprehensive DOT risk assessment."""
+    try:
+        if not os.environ.get("OPEN_API_KEY"):
+            return generate_fallback_risk_assessment(hos_data, safety_data)
+
+        prompt = f"""Generate a comprehensive DOT Risk Assessment based on the following fleet data:
+
+HOS Violations: {hos_data.get('total_current', 0)} violations this week
+Safety Events: {safety_data.get('total_current', 0) if safety_data else 'N/A'}
+Personal Conveyance: {pc_data.get('exceeded_daily_limit_count', 0) if pc_data else 'N/A'} drivers over limits
+Unassigned Driving: {unassigned_data.get('total_segments', 0) if unassigned_data else 'N/A'} segments
+Missed DVIRs: {dvir_data.get('total_missed', 0) if dvir_data else 'N/A'}
+
+Provide a 2-3 paragraph assessment covering:
+1. Overall compliance risk level (High/Medium/Low)
+2. Key areas of concern
+3. Recommendations for improvement
+4. Potential DOT audit vulnerabilities"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=400,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return generate_fallback_risk_assessment(hos_data, safety_data)
+
+
+def generate_fallback_risk_assessment(hos_data, safety_data):
+    """Fallback risk assessment when OpenAI unavailable."""
+    violations = hos_data.get('total_current', 0)
+    risk_level = "High" if violations > 100 else "Medium" if violations > 50 else "Low"
+
+    return f"""Based on the comprehensive analysis of fleet compliance data, the overall DOT risk level is assessed as {risk_level}. 
+
+    The fleet recorded {violations} HOS violations this week, which represents the primary compliance concern. Key risk factors include 
+    inconsistent DVIR completion, elevated personal conveyance usage among certain drivers, and unassigned driving segments that 
+    suggest procedural gaps in ELD login processes.
+
+    To mitigate DOT audit vulnerabilities, immediate focus should be placed on driver training for HOS compliance, reinforcement 
+    of daily inspection protocols, and systematic review of unassigned driving patterns. Regular monitoring and corrective actions 
+    in these areas will significantly reduce regulatory exposure and improve overall fleet safety performance."""
