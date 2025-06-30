@@ -10,6 +10,7 @@
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/scroller/2.1.1/js/dataTables.scroller.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/static/js/additional-charts.js"></script>
 
   <style>
     * {
@@ -579,6 +580,18 @@ function drawChart(name, rows, cols){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
+  const tableName = window.tableName;
+  const chartType = document.getElementById("chart-type").value;
+  if(tableName === "personnel_conveyance"){
+    window.drawPCCharts(name, rows, cols, chartType);
+    return;
+  }else if(tableName === "safety_inbox"){
+    window.drawSafetyCharts(name, rows, cols, chartType);
+    return;
+  }else if(tableName === "unassigned_hos"){
+    window.drawUnassignedCharts(name, rows, cols, chartType);
+    return;
+  }
   // Find the Violation Type column regardless of casing, spaces, or invisible
   // sort icons that DataTables adds to the header text.
   const normalize = s => s.toLowerCase()
