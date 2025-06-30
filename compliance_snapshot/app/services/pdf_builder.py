@@ -27,6 +27,7 @@ from .report_generator import (
     generate_unassigned_driving_summary,  # Added missing import
     generate_unassigned_driving_insights,
     generate_unassigned_segment_details,
+    generate_dot_risk_assessment,
 )
 
 from .visualizations.chart_factory import (
