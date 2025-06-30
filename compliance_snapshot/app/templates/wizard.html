@@ -591,6 +591,21 @@ function drawChart(name, rows, cols){
   }else if(tableName === "unassigned_hos"){
     window.drawUnassignedCharts(name, rows, cols, chartType);
     return;
+  }else if(tableName === 'driver_behaviors'){
+    if(window.drawDriverBehaviorsCharts){
+      window.drawDriverBehaviorsCharts(name, rows, cols, chartType);
+      return;
+    }
+  }else if(tableName === 'mistdvi'){
+    if(window.drawMissedDVIRCharts){
+      window.drawMissedDVIRCharts(name, rows, cols, chartType);
+      return;
+    }
+  }else if(tableName === 'driver_safety' || tableName === 'drivers_safety'){
+    if(window.drawDriverSafetyCharts){
+      window.drawDriverSafetyCharts(name, rows, cols, chartType);
+      return;
+    }
   }
   // Find the Violation Type column regardless of casing, spaces, or invisible
   // sort icons that DataTables adds to the header text.
