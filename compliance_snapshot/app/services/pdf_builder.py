@@ -193,7 +193,6 @@ def build_pdf(
     # Create custom header section
     from reportlab.platypus import Table as RLTable
     from reportlab.platypus import TableStyle as RLTableStyle
-    from reportlab.lib.units import inch
 
     # Add logo/graphic placeholder (the red scribble design)
     logo_placeholder = Spacer(1, 50)  # Replace with Image('path/to/logo.png', width=100, height=50)
