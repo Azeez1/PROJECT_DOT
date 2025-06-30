@@ -387,100 +387,154 @@ function drawDriverSafetyCharts(name, rows, cols, chartType) {
     });
 
     if (chartType === 'bar') {
-        // Count safety events across all drivers
-        const eventTypes = [
-            'Harsh Accel', 'Harsh Brake', 'Harsh Turn', 'Mobile Usage',
-            'Inattentive Driving', 'Drowsy', 'Rolling Stop', 'No Seat Belt',
-            'Forward Collision Warning', 'Following Distance'
-        ];
+        // Bar Chart: Top 10 Drivers by Safety Score (showing best performers)
+        const driverScores = [];
 
-        const eventCounts = {};
-
-        // Initialize counts
-        eventTypes.forEach(eventType => {
-            eventCounts[eventType] = 0;
-        });
-
-        // Count events - check various column name formats
         rows.forEach(row => {
-            cols.forEach((col, idx) => {
-                const colNorm = normalize(col);
+            const driver = row[driverIdx];
+            const score = scoreIdx !== -1 ? parseFloat(row[scoreIdx]) : null;
+            const driveTimeStr = row[cols.findIndex(c => normalize(c).includes('drive_time'))];
 
-                // Match column names to event types
-                if ((colNorm === 'harsh_accel' || col === 'Harsh Accel') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Harsh Accel']++;
-                } else if ((colNorm === 'harsh_brake' || col === 'Harsh Brake') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Harsh Brake']++;
-                } else if ((colNorm === 'harsh_turn' || col === 'Harsh Turn') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Harsh Turn']++;
-                } else if ((colNorm === 'mobile_usage' || col === 'Mobile Usage') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Mobile Usage']++;
-                } else if ((colNorm.includes('inattentive') || col === 'Inattentive Driving') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Inattentive Driving']++;
-                } else if ((colNorm === 'drowsy' || col === 'Drowsy') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Drowsy']++;
-                } else if ((colNorm === 'rolling_stop' || col === 'Rolling Stop') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Rolling Stop']++;
-                } else if ((colNorm.includes('no_seat_belt') || col === 'No Seat Belt') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['No Seat Belt']++;
-                } else if ((colNorm.includes('forward_collision') || col === 'Forward Collision Warning') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Forward Collision Warning']++;
-                } else if ((colNorm.includes('following_distance') || col === 'Following Distance') && (row[idx] === 1 || row[idx] === 'Yes')) {
-                    eventCounts['Following Distance']++;
+            if (driver && score !== null && !isNaN(score)) {
+                // Parse drive time if available
+                let driveHours = 0;
+                if (driveTimeStr) {
+                    driveHours = parseTimeToHours(driveTimeStr);
                 }
-            });
+
+                driverScores.push({
+                    driver,
+                    score,
+                    driveHours
+                });
+            }
         });
 
-        // Filter out events with 0 count
-        const filteredEvents = Object.entries(eventCounts)
-            .filter(([_, count]) => count > 0)
-            .sort((a, b) => b[1] - a[1]);
+        if (driverScores.length === 0) {
+            // Alternative: Show speeding percentages by severity
+            const speedingCols = {
+                'Light': cols.findIndex(c => normalize(c).includes('percent_light_speeding')),
+                'Moderate': cols.findIndex(c => normalize(c).includes('percent_moderate_speeding')),
+                'Heavy': cols.findIndex(c => normalize(c).includes('percent_heavy_speeding')),
+                'Severe': cols.findIndex(c => normalize(c).includes('percent_severe_speeding'))
+            };
 
-        if (filteredEvents.length === 0) {
-            // If no events found, show a message
-            ctx.font = '16px Arial';
-            ctx.fillStyle = '#666';
-            ctx.textAlign = 'center';
-            ctx.fillText('No safety events found in data', canvas.width / 2, canvas.height / 2);
-            return;
+            const speedingTotals = {
+                'Light': 0,
+                'Moderate': 0,
+                'Heavy': 0,
+                'Severe': 0
+            };
+
+            let validRows = 0;
+
+            rows.forEach(row => {
+                let hasValidData = false;
+                Object.entries(speedingCols).forEach(([severity, idx]) => {
+                    if (idx !== -1) {
+                        const value = parseFloat(row[idx]);
+                        if (!isNaN(value)) {
+                            speedingTotals[severity] += value;
+                            hasValidData = true;
+                        }
+                    }
+                });
+                if (hasValidData) validRows++;
+            });
+
+            if (validRows > 0) {
+                // Calculate averages
+                const averages = Object.entries(speedingTotals).map(([severity, total]) => ({
+                    severity,
+                    average: (total / validRows).toFixed(2)
+                }));
+
+                window.currentChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: averages.map(a => a.severity),
+                        datasets: [{
+                            label: 'Average Speeding %',
+                            data: averages.map(a => a.average),
+                            backgroundColor: ['#4CAF50', '#FFC107', '#FF9800', '#F44336']
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Fleet Average Speeding by Severity'
+                            },
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Percentage of Drive Time'
+                                }
+                            }
+                        }
+                    }
+                });
+                return;
+            }
         }
+
+        // Sort by safety score descending (best drivers first)
+        const sorted = driverScores.sort((a, b) => b.score - a.score).slice(0, 10);
+
+        // Color based on score
+        const colors = sorted.map(d => {
+            if (d.score >= 95) return '#4CAF50'; // Green
+            if (d.score >= 90) return '#8BC34A'; // Light Green
+            if (d.score >= 80) return '#FFC107'; // Yellow
+            if (d.score >= 70) return '#FF9800'; // Orange
+            return '#F44336'; // Red
+        });
 
         window.currentChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: filteredEvents.map(([event]) => event),
+                labels: sorted.map(d => d.driver),
                 datasets: [{
-                    label: 'Event Count',
-                    data: filteredEvents.map(([_, count]) => count),
-                    backgroundColor: '#FF6384'
+                    label: 'Safety Score',
+                    data: sorted.map(d => d.score),
+                    backgroundColor: colors
                 }]
             },
             options: {
+                indexAxis: 'y', // Horizontal bars
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Safety Event Distribution'
+                        text: 'Top 10 Drivers by Safety Score'
                     },
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const driver = sorted[context.dataIndex];
+                                if (driver.driveHours > 0) {
+                                    return `Drive Time: ${driver.driveHours.toFixed(1)} hours`;
+                                }
+                                return '';
+                            }
+                        }
                     }
                 },
                 scales: {
-                    y: {
+                    x: {
                         beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        },
+                        max: 100,
                         title: {
                             display: true,
-                            text: 'Number of Events'
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            autoSkip: false,
-                            maxRotation: 45,
-                            minRotation: 45
+                            text: 'Safety Score'
                         }
                     }
                 }
