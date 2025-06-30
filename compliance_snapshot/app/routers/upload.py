@@ -11,7 +11,7 @@ import sqlite3
 import logging
 
 router = APIRouter()
-templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
+templates = Jinja2Templates(directory="templates")
 
 @router.get("/", tags=["health"])
 async def root():

@@ -354,6 +354,12 @@
         
         uploadForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+<<<<<< codex/revert-to-original-form-submission-code
+            if (selectedFiles.length === 0) return;
+
+            const formData = new FormData();
+            selectedFiles.forEach(f => formData.append('files', f));
+=======
 
             if (selectedFiles.length === 0) {
                 alert('Please select files to upload');
@@ -364,10 +370,24 @@
             selectedFiles.forEach(file => {
                 formData.append('files', file);
             });
+>>>>>> main
 
             loading.style.display = 'block';
             uploadForm.style.display = 'none';
 
+<<<<<< codex/revert-to-original-form-submission-code
+            const resp = await fetch('/generate', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (resp.redirected) {
+                window.location.href = resp.url;
+            } else {
+                loading.style.display = 'none';
+                uploadForm.style.display = 'block';
+                alert('Upload failed');
+=======
             try {
                 const response = await fetch('/generate', {
                     method: 'POST',
@@ -395,6 +415,7 @@
                 loading.style.display = 'none';
                 uploadForm.style.display = 'block';
                 alert('Upload failed: ' + error.message);
+>>>>>> main
             }
         });
 
