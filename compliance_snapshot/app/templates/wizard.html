@@ -314,7 +314,8 @@ const TABLE_NAMES = {
   'mistdvi': 'Missed DVIR',
   'driver_behaviors': 'Safety Behaviors',
   'driver_safety': 'Driver Safety',
-  'drivers_safety': 'Driver Safety'
+  'drivers_safety': 'Driver Safety',
+  'driver_safety_report': 'Driver Safety'
 };
 
 // keep reference to the active DataTable instance
@@ -581,6 +582,7 @@ function drawChart(name, rows, cols){
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
   const tableName = window.tableName;
+  console.log('Current table name:', tableName);
   const chartType = document.getElementById("chart-type").value;
   if(tableName === "personnel_conveyance"){
     window.drawPCCharts(name, rows, cols, chartType);
@@ -601,7 +603,7 @@ function drawChart(name, rows, cols){
       window.drawMissedDVIRCharts(name, rows, cols, chartType);
       return;
     }
-  }else if(tableName === 'driver_safety' || tableName === 'drivers_safety'){
+  }else if(tableName === 'driver_safety' || tableName === 'drivers_safety' || tableName === 'driver_safety_report'){
     if(window.drawDriverSafetyCharts){
       window.drawDriverSafetyCharts(name, rows, cols, chartType);
       return;

@@ -145,3 +145,31 @@ def test_detect_driver_safety_by_filename(tmp_path):
 
     report, _ = detect_report_type(path)
     assert report == 'driver_safety'
+
+
+def test_detect_driver_safety_by_rank_and_safety_cols(tmp_path):
+    cols = [
+        'Driver Safety Rank',
+        'Driver Name',
+        'Safety Score'
+    ]
+    df = pd.DataFrame([], columns=cols)
+    path = tmp_path / 'ds_rank.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'driver_safety'
+
+
+def test_detect_driver_safety_by_score_drive_time(tmp_path):
+    cols = [
+        'Safety Score',
+        'Total Drive Time',
+        'Some Other'
+    ]
+    df = pd.DataFrame([], columns=cols)
+    path = tmp_path / 'ds_drive.csv'
+    df.to_csv(path, index=False)
+
+    report, _ = detect_report_type(path)
+    assert report == 'driver_safety'
