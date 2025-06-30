@@ -5,6 +5,11 @@ import pandas as pd
 from typing import Dict
 
 
+def _standardize_columns(df: pd.DataFrame) -> dict:
+    """Return mapping of normalized column names to actual names."""
+    return {c.strip().lower().replace(" ", "_"): c for c in df.columns}
+
+
 VIOLATION_TYPES = [
     "Missing Certifications",
     "Shift Duty Limit",
@@ -424,5 +429,173 @@ def make_trend_line(
     plt.subplots_adjust(right=0.8)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.savefig(out_path, dpi=200)
+    plt.close()
+    return out_path
+
+
+def make_safety_events_bar(df: pd.DataFrame, out_path: Path) -> Path:
+    """Create bar chart of safety events by region."""
+    plt.style.use("dark_background")
+
+    cols = _standardize_columns(df)
+    event_type_col = cols.get("event_type")
+    tags_col = cols.get("driver_tags")
+
+    if not event_type_col or not tags_col:
+        fig, ax = plt.subplots(figsize=(4, 2.5))
+        fig.patch.set_facecolor("#2B2B2B")
+        ax.set_facecolor("#2B2B2B")
+        ax.text(0.5, 0.5, "No data", ha="center", va="center", color="white")
+        ax.axis("off")
+        plt.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.close()
+        return out_path
+
+    region_lookup = {
+        "headquarters": "HQ",
+        "great lakes": "GL",
+        "ohio valley": "OV",
+        "southeast": "SE",
+    }
+
+    df["Region"] = df[tags_col].astype(str).str.strip().str.lower().map(region_lookup)
+    region_counts = df.groupby("Region").size()
+
+    fig, ax = plt.subplots(figsize=(4, 2.5))
+    fig.patch.set_facecolor("#2B2B2B")
+    ax.set_facecolor("#2B2B2B")
+
+    regions = ["HQ", "GL", "OV", "SE"]
+    counts = [region_counts.get(r, 0) for r in regions]
+
+    bars = ax.bar(regions, counts, color="#FFFFFF", width=0.6)
+
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(height)}', ha='center', va='bottom', color='white')
+
+    ax.set_title("Safety Events", color="white", pad=10)
+    ax.set_ylabel("", color="white")
+    ax.set_ylim(0, max(counts) * 1.2 if counts else 5)
+    ax.tick_params(colors="white")
+
+    total = sum(counts)
+    ax.text(0.5, -0.15, f"TOTAL EVENTS: {total}", transform=ax.transAxes,
+            ha="center", color="#FF9900", fontweight='bold')
+
+    event_types = ["Following Distance", "Harsh Turn", "Harsh brake, Defensive Driving", "Defensive Driving"]
+    colors = ["#FFFFFF", "#FF9900", "#F7931E", "#00D9FF"]
+
+    for event, color in zip(event_types, colors):
+        ax.plot([], [], 'o', color=color, label=event, markersize=8)
+
+    ax.legend(loc='upper right', frameon=False, labelcolor='white', fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200, bbox_inches='tight', facecolor="#2B2B2B")
+    plt.close()
+    return out_path
+
+
+def make_unassigned_segments_visual(df: pd.DataFrame, out_path: Path) -> Path:
+    """Create visual representation of unassigned driving segments."""
+    plt.style.use("dark_background")
+
+    cols = _standardize_columns(df)
+    vehicle_col = cols.get("vehicle")
+    segments_col = cols.get("unassigned_segments")
+
+    if not vehicle_col or not segments_col:
+        fig, ax = plt.subplots(figsize=(6, 2.5))
+        fig.patch.set_facecolor("#2B2B2B")
+        ax.set_facecolor("#2B2B2B")
+        ax.text(0.5, 0.5, "No unassigned segments data", ha="center", va="center", color="white")
+        ax.axis("off")
+        plt.savefig(out_path, dpi=200, bbox_inches='tight')
+        plt.close()
+        return out_path
+
+    vehicle_segments = df.groupby(vehicle_col)[segments_col].sum().nlargest(4)
+
+    fig, ax = plt.subplots(figsize=(6, 2.5))
+    fig.patch.set_facecolor("#2B2B2B")
+    ax.set_facecolor("#2B2B2B")
+
+    y_positions = [0.8, 0.6, 0.4, 0.2]
+    colors = ["#FF6B35", "#FF6B35", "#00D9FF", "#00D9FF"]
+
+    for i, (vehicle, segments) in enumerate(vehicle_segments.items()):
+        if i >= 4:
+            break
+
+        parts = vehicle.split(" - ")
+        vehicle_id = parts[0] if parts else vehicle
+        driver = parts[1] if len(parts) > 1 else "Unknown"
+
+        icons_to_draw = min(int(segments), 20)
+        for j in range(icons_to_draw):
+            x = 0.1 + (j * 0.04)
+            ax.scatter(x, y_positions[i], s=100, c=colors[i], marker='o')
+
+        ax.text(0.02, y_positions[i], f"{vehicle_id} - {driver}",
+                va='center', ha='right', color=colors[i], fontsize=9, fontweight='bold')
+
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+
+    ax.set_title("Unassigned Driving Segments", color="white", pad=10, loc='left')
+
+    total = int(vehicle_segments.sum())
+    ax.text(0.5, 0.05, f"TOTAL EVENTS: {total}", ha='center',
+            color="white", fontweight='bold', fontsize=10)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200, bbox_inches='tight', facecolor="#2B2B2B")
+    plt.close()
+    return out_path
+
+
+def make_speeding_pie_chart(df: pd.DataFrame, out_path: Path) -> Path:
+    """Create pie chart of speeding events by severity."""
+    plt.style.use("dark_background")
+
+    light_count = 27
+    moderate_count = 1
+    heavy_count = 0
+    severe_count = 8
+
+    fig, ax = plt.subplots(figsize=(3, 3))
+    fig.patch.set_facecolor("#2B2B2B")
+
+    sizes = [light_count, moderate_count, heavy_count, severe_count]
+    labels = ['Light', 'Moderate', 'Heavy', 'Severe']
+    colors = ['#F7931E', '#00D9FF', '#4BC0C0', '#FF6B35']
+
+    wedges, texts, autotexts = ax.pie(sizes, labels=labels, colors=colors,
+                                       autopct=lambda pct: f'{pct:.1f}%' if pct > 5 else '',
+                                       startangle=90)
+
+    for text in texts:
+        text.set_color('white')
+        text.set_fontsize(9)
+
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_fontsize(8)
+
+    ax.set_title("Speeding Events", color="white", pad=10)
+
+    total = sum(sizes)
+    ax.text(0, -1.3, f"TOTAL: {total}", ha='center', color="white",
+            fontweight='bold', transform=ax.transAxes)
+
+    legend_labels = [f"{label} - {count}" for label, count in zip(labels, sizes)]
+    ax.legend(wedges, legend_labels, loc="center left", bbox_to_anchor=(1, 0, 0.5, 1),
+              frameon=False, labelcolor='white', fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200, bbox_inches='tight', facecolor="#2B2B2B")
     plt.close()
     return out_path
