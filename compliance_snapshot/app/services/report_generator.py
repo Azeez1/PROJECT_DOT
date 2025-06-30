@@ -1027,7 +1027,10 @@ Provide a 2-3 paragraph assessment covering:
             max_tokens=400,
             temperature=0.7,
         )
-        return response.choices[0].message.content.strip()
+
+        assessment = response.choices[0].message.content.strip()
+        assessment = assessment.replace('###', '').replace('##', '').strip()
+        return assessment
     except Exception:
         return generate_fallback_risk_assessment(hos_data, safety_data)
 

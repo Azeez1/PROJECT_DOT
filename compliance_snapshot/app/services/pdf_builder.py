@@ -149,7 +149,14 @@ def build_pdf(
 
     # ----- build the PDF -----
     styles = getSampleStyleSheet()
-    doc = SimpleDocTemplate(str(out_path), pagesize=LETTER)
+    doc = SimpleDocTemplate(
+        str(out_path),
+        pagesize=LETTER,
+        topMargin=0.5 * inch,
+        bottomMargin=0.5 * inch,
+        leftMargin=0.75 * inch,
+        rightMargin=0.75 * inch,
+    )
 
     # Create custom styles
     title_style = ParagraphStyle(
@@ -167,8 +174,8 @@ def build_pdf(
         parent=styles['Heading2'],
         fontSize=14,
         textColor=colors.HexColor('#000000'),
-        spaceAfter=12,
-        spaceBefore=20
+        spaceAfter=8,
+        spaceBefore=12
     )
 
     normal_bold = ParagraphStyle(
@@ -192,7 +199,7 @@ def build_pdf(
 
     # Main title
     story.append(Paragraph("DOT COMPLIANCE SNAPSHOT", title_style))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     # Create the date/location/position table
     header_end_date = end_date or pd.Timestamp.utcnow().date()
@@ -228,7 +235,7 @@ def build_pdf(
     ]))
 
     story.append(header_table)
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 12))
 
     # Add the fleet safety snapshot subtitle with date range
     fleet_snapshot_title = Paragraph(
@@ -243,7 +250,7 @@ def build_pdf(
         )
     )
     story.append(fleet_snapshot_title)
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     chart_paths = {
         "hos_violation": bar_path,
@@ -255,7 +262,7 @@ def build_pdf(
 
     if create_dashboard:
         story.append(Paragraph("<b>Visual Dashboard</b>", section_title_style))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 12))
 
         chart_data = []
         row1 = []
@@ -294,12 +301,12 @@ def build_pdf(
 
     # PAGE 1: HOS Violations Charts
     story.append(Paragraph("<b>HOS Violations Analysis</b>", section_title_style))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     if "hos_violation" in chart_paths:
         img = Image(str(chart_paths["hos_violation"]), width=5 * inch, height=3 * inch)
         story.append(img)
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 12))
 
     if "trend" in chart_paths:
         img = Image(str(chart_paths["trend"]), width=5 * inch, height=3 * inch)
@@ -309,12 +316,12 @@ def build_pdf(
 
     # PAGE 2: Safety Events and Unassigned Driving
     story.append(Paragraph("<b>Safety Events and Unassigned Driving Analysis</b>", section_title_style))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     if "safety_events" in chart_paths:
         img = Image(str(chart_paths["safety_events"]), width=5 * inch, height=3 * inch)
         story.append(img)
-        story.append(Spacer(1, 30))
+        story.append(Spacer(1, 12))
 
     if "unassigned_segments" in chart_paths:
         img = Image(str(chart_paths["unassigned_segments"]), width=6 * inch, height=3 * inch)
@@ -324,7 +331,7 @@ def build_pdf(
 
     # PAGE 3: Speeding Analysis
     story.append(Paragraph("<b>Speeding Events Analysis</b>", section_title_style))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     if "speeding_events" in chart_paths:
         img = Image(str(chart_paths["speeding_events"]), width=4 * inch, height=4 * inch)
@@ -371,12 +378,12 @@ def build_pdf(
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
     ]))
     story.append(summary_table)
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     # Summary Insights section
     story.append(Paragraph("<b>Insights:</b>", normal_bold))
     story.append(Paragraph(summary_insights, styles['Normal']))
-    story.append(Spacer(1, 30))
+    story.append(Spacer(1, 12))
 
     # HOS Violation Trend section
     story.append(Paragraph("<b>HOS Violation Trend (4 weeks)</b>", section_title_style))
@@ -391,7 +398,7 @@ def build_pdf(
         safety_inbox_df = load_data(wiz_id, "safety_inbox")
         if not safety_inbox_df.empty:
             # Safety Inbox Events Analysis section
-            story.append(Spacer(1, 30))
+            story.append(Spacer(1, 12))
             story.append(Paragraph("<b>Safety Inbox Events Analysis</b>", section_title_style))
 
             # Generate summary data
@@ -425,7 +432,7 @@ def build_pdf(
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ]))
             story.append(safety_table)
-            story.append(Spacer(1, 20))
+            story.append(Spacer(1, 12))
 
             # Add insights
             story.append(Paragraph("<b>Insights:</b>", normal_bold))
@@ -440,7 +447,7 @@ def build_pdf(
     try:
         pc_df = load_data(wiz_id, "personnel_conveyance")
         if not pc_df.empty:
-            story.append(Spacer(1, 30))
+            story.append(Spacer(1, 12))
             story.append(Paragraph("Personal Conveyance (PC) Usage", section_title_style))
 
             pc_data = generate_pc_usage_summary(pc_df, end_date or pd.Timestamp.utcnow().date())
@@ -479,10 +486,10 @@ def build_pdf(
             story.append(Spacer(1, 12))
 
             pc_bar_path = make_pc_usage_bar_chart(pc_df, tmpdir / "pc_bar.png")
-            story.append(Spacer(1, 20))
+            story.append(Spacer(1, 12))
             story.append(Image(str(pc_bar_path), width=400, height=250))
 
-            story.append(Spacer(1, 20))
+            story.append(Spacer(1, 12))
             story.append(Paragraph("<b>Insights:</b>", normal_bold))
             pc_insights = generate_pc_usage_insights(pc_data)
             pc_insights = convert_html_to_reportlab(pc_insights)
@@ -494,7 +501,7 @@ def build_pdf(
     try:
         unassigned_df = load_data(wiz_id, "unassigned_hos")
         if not unassigned_df.empty:
-            story.append(Spacer(1, 30))
+            story.append(Spacer(1, 12))
 
             try:
                 # Generate summary data
@@ -511,14 +518,14 @@ def build_pdf(
                 #     story.append(Image(str(unassigned_bar_path), width=450, height=300))
 
                 # Add insights regardless
-                story.append(Spacer(1, 20))
+                story.append(Spacer(1, 12))
                 story.append(Paragraph("<b>Insights:</b>", normal_bold))
                 first_insights = generate_unassigned_driving_insights(unassigned_data)
                 first_insights = convert_html_to_reportlab(first_insights)
                 story.append(Paragraph(first_insights, styles['Normal']))
 
                 # Add section header and second insights
-                story.append(Spacer(1, 30))
+                story.append(Spacer(1, 12))
                 story.append(Paragraph("<b>Unassigned Driving Segments</b>", section_title_style))
                 story.append(Spacer(1, 12))
                 story.append(Paragraph("<b>Insights:</b>", normal_bold))
@@ -565,7 +572,7 @@ def build_pdf(
     try:
         mistdvi_df = load_data(wiz_id, "mistdvi")
         if not mistdvi_df.empty:
-            story.append(Spacer(1, 30))
+            story.append(Spacer(1, 12))
             story.append(Paragraph("<b>Missed DVIRs (Pre/Post Trip Reports)</b>", section_title_style))
             story.append(Spacer(1, 12))
 
@@ -613,7 +620,7 @@ def build_pdf(
             story.append(dvir_table)
 
             # Add insights AFTER the table
-            story.append(Spacer(1, 20))
+            story.append(Spacer(1, 12))
             story.append(Paragraph("<b>Insights:</b>", normal_bold))
             dvir_insights = generate_missed_dvir_insights(dvir_data)
             dvir_insights = convert_html_to_reportlab(dvir_insights)
@@ -625,7 +632,7 @@ def build_pdf(
     # Overall DOT Risk Assessment section
     story.append(PageBreak())
     story.append(Paragraph("<b>Overall DOT Risk Assessment</b>", section_title_style))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 12))
 
     risk_assessment = generate_dot_risk_assessment(
         summary_data,
@@ -636,7 +643,7 @@ def build_pdf(
         dvir_data if 'dvir_data' in locals() else None,
     )
 
-    risk_assessment = risk_assessment.replace('####', '')
+    risk_assessment = risk_assessment.replace('####', '').replace('###', '')
     risk_assessment = re.sub(
         r"(overall DOT risk level is assessed as\s*)(High|Medium|Low)",
         lambda m: m.group(1) + f"<b>{m.group(2)}</b>",
