@@ -11,7 +11,7 @@ import sqlite3
 import logging
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 
 @router.get("/", tags=["health"])
 async def root():
@@ -25,16 +25,21 @@ async def upload_form(request: Request):
 async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
     """Save uploaded files and create database tables for each."""
 
-    print(f"DEBUG: Received {len(files)} files")  # Add this debug line
-
     logger = logging.getLogger("upload")
+
+    # Validate files first
+    if not files or all(not f.filename for f in files):
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
     ticket = uuid.uuid4().hex
     folder = Path(f"/tmp/{ticket}")
     folder.mkdir(parents=True, exist_ok=True)
 
-    print(f"DEBUG: Created folder {folder}")  # Add this debug line
-
-    await save_uploads(folder, files)
+    try:
+        await save_uploads(folder, files)
+    except Exception as e:
+        logger.error(f"Failed to save uploads: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save files: {str(e)}")
 
     db = sqlite3.connect(folder / "snapshot.db")
     errors: list[str] = []
