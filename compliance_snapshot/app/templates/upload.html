@@ -352,41 +352,30 @@
             displayFiles();
         }
         
-        uploadForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (selectedFiles.length === 0) return;
+        uploadForm.addEventListener('submit', function(e) {
+            // Don't prevent default - let the form submit normally
+            if (selectedFiles.length === 0) {
+                e.preventDefault();
+                alert('Please select files to upload');
+                return;
+            }
 
-            const formData = new FormData();
-            selectedFiles.forEach(f => formData.append('files', f));
+            // Clear the original file input
+            fileInput.value = '';
+            
+            // Add each selected file to the form
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => {
+                dt.items.add(file);
+            });
+            fileInput.files = dt.files;
 
+            // Show loading
             loading.style.display = 'block';
             uploadForm.style.display = 'none';
 
-            try {
-                // Don't use fetch for form submission with redirect
-                // Create a temporary form and submit it the traditional way
-                const tempForm = document.createElement('form');
-                tempForm.method = 'POST';
-                tempForm.action = '/generate';
-                tempForm.style.display = 'none';
-
-                // Add files to the form
-                selectedFiles.forEach(file => {
-                    const fileInput = document.createElement('input');
-                    fileInput.type = 'file';
-                    fileInput.name = 'files';
-                    fileInput.files = createFileList([file]);
-                    tempForm.appendChild(fileInput);
-                });
-
-                document.body.appendChild(tempForm);
-                tempForm.submit();
-            } catch (error) {
-                console.error('Upload error:', error);
-                loading.style.display = 'none';
-                uploadForm.style.display = 'block';
-                alert('Upload failed: ' + error.message);
-            }
+            // Let the form submit naturally
+            return true;
         });
 
         // Helper function to create FileList
