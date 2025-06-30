@@ -361,103 +361,198 @@ function drawMissedDVIRCharts(name, rows, cols, chartType) {
 // Driver Safety Report Charts
 function drawDriverSafetyCharts(name, rows, cols, chartType) {
     const canvas = document.getElementById('preview');
-    if (!rows.length) { canvas.classList.add('hidden'); return; }
-
-    const scoreIdx = cols.findIndex(c => normalize(c).includes('safety_score'));
-    const driveIdx = cols.findIndex(c => normalize(c).includes('drive_time'));
-    const distIdx = cols.findIndex(c => normalize(c).includes('total_distance'));
-    const tagsIdx = cols.findIndex(c => normalize(c) === 'tags');
-
-    const eventMap = {
-        'Harsh Accel':'harsh_accel',
-        'Harsh Brake':'harsh_brake',
-        'Harsh Turn':'harsh_turn',
-        'Mobile Usage':'mobile_usage',
-        'Inattentive Driving':'inattentive_driving',
-        'Drowsy':'drowsy',
-        'Rolling Stop':'rolling_stop',
-        'No Seat Belt':'no_seat_belt'
-    };
-    const eventIdx = {};
-    Object.entries(eventMap).forEach(([k,v])=>{
-        const idx = cols.findIndex(c => normalize(c) === v);
-        if(idx !== -1) eventIdx[k] = idx;
-    });
-
     const ctx = canvas.getContext('2d');
-    if (window.currentChart) window.currentChart.destroy();
+
+    if (window.currentChart) {
+        window.currentChart.destroy();
+    }
+
     canvas.classList.remove('hidden');
 
-    if (chartType === 'pie' && Object.keys(eventIdx).length) {
-        const totals = {};
-        Object.keys(eventIdx).forEach(k => totals[k] = 0);
-        rows.forEach(r => {
-            Object.entries(eventIdx).forEach(([k,idx]) => {
-                const val = parseInt(r[idx],10) || 0;
-                totals[k] += val;
+    // Find column indices - handle both exact matches and contains matches
+    const normalize = s => s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, '_').trim();
+
+    // Find driver name column
+    const driverIdx = cols.findIndex(c => {
+        const norm = normalize(c);
+        return norm === 'driver_name' || norm.includes('driver_name') || 
+               (norm.includes('driver') && !norm.includes('driver_id'));
+    });
+
+    // Find other columns
+    const scoreIdx = cols.findIndex(c => normalize(c) === 'safety_score' || normalize(c).includes('safety_score'));
+    const distanceIdx = cols.findIndex(c => {
+        const norm = normalize(c);
+        return norm.includes('total_distance') || norm === 'total_distance_mi';
+    });
+
+    if (chartType === 'bar') {
+        // Count safety events across all drivers
+        const eventTypes = [
+            'Harsh Accel', 'Harsh Brake', 'Harsh Turn', 'Mobile Usage',
+            'Inattentive Driving', 'Drowsy', 'Rolling Stop', 'No Seat Belt',
+            'Forward Collision Warning', 'Following Distance'
+        ];
+
+        const eventCounts = {};
+
+        // Initialize counts
+        eventTypes.forEach(eventType => {
+            eventCounts[eventType] = 0;
+        });
+
+        // Count events - check various column name formats
+        rows.forEach(row => {
+            cols.forEach((col, idx) => {
+                const colNorm = normalize(col);
+
+                // Match column names to event types
+                if ((colNorm === 'harsh_accel' || col === 'Harsh Accel') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Harsh Accel']++;
+                } else if ((colNorm === 'harsh_brake' || col === 'Harsh Brake') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Harsh Brake']++;
+                } else if ((colNorm === 'harsh_turn' || col === 'Harsh Turn') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Harsh Turn']++;
+                } else if ((colNorm === 'mobile_usage' || col === 'Mobile Usage') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Mobile Usage']++;
+                } else if ((colNorm.includes('inattentive') || col === 'Inattentive Driving') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Inattentive Driving']++;
+                } else if ((colNorm === 'drowsy' || col === 'Drowsy') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Drowsy']++;
+                } else if ((colNorm === 'rolling_stop' || col === 'Rolling Stop') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Rolling Stop']++;
+                } else if ((colNorm.includes('no_seat_belt') || col === 'No Seat Belt') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['No Seat Belt']++;
+                } else if ((colNorm.includes('forward_collision') || col === 'Forward Collision Warning') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Forward Collision Warning']++;
+                } else if ((colNorm.includes('following_distance') || col === 'Following Distance') && (row[idx] === 1 || row[idx] === 'Yes')) {
+                    eventCounts['Following Distance']++;
+                }
             });
         });
-        const labels = Object.keys(totals);
-        const data = labels.map(l => totals[l]);
-        const colors = labels.map((_,i)=>`hsl(${i*40},70%,60%)`);
-        window.currentChart = new Chart(ctx, {
-            type:'radar',
-            data:{ labels, datasets:[{ label:'Events', data, backgroundColor:'rgba(54,162,235,0.2)', borderColor:'#36A2EB' }] },
-            options:{ plugins:{ title:{ display:true, text:name } }, scales:{ r:{ beginAtZero:true } } }
-        });
-        return;
-    }
 
-    if (chartType === 'line' && scoreIdx !== -1 && driveIdx !== -1) {
-        const points = [];
-        rows.forEach(r => {
-            const score = parseFloat(r[scoreIdx]);
-            const drive = parseTimeToHours(r[driveIdx]);
-            if (isNaN(score) || isNaN(drive)) return;
-            const dist = distIdx !== -1 ? parseFloat(r[distIdx]) || 0 : 0;
-            const reg = tagsIdx !== -1 ? extractRegion(r[tagsIdx]) : 'Other';
-            points.push({ x: drive, y: score, r: Math.max(3, Math.sqrt(dist)/10), reg });
-        });
-        const regions = [...new Set(points.map(p=>p.reg))];
-        const palette = ['#3366CC','#DC3912','#FF9900','#109618','#990099','#0099C6'];
-        const datasets = regions.map((reg,i)=>({
-            label: reg,
-            data: points.filter(p=>p.reg===reg),
-            backgroundColor: palette[i % palette.length]
-        }));
-        window.currentChart = new Chart(ctx, {
-            type:'scatter',
-            data:{ datasets },
-            options:{ plugins:{ title:{ display:true, text:name } }, scales:{ x:{ title:{ display:true, text:'Drive Hours' } }, y:{ title:{ display:true, text:'Safety Score' }, beginAtZero:true, max:100 } } }
-        });
-        return;
-    }
+        // Filter out events with 0 count
+        const filteredEvents = Object.entries(eventCounts)
+            .filter(([_, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1]);
 
-    if (chartType === 'bar' && tagsIdx !== -1) {
-        const severities = ['heavy_speeding_time','severe_speeding_time'];
-        const regData = {};
-        rows.forEach(r => {
-            const reg = extractRegion(r[tagsIdx]);
-            if(!regData[reg]) regData[reg] = { heavy:0, severe:0 };
-            const heavyIdx = cols.findIndex(c=>normalize(c)===severities[0]);
-            const severeIdx = cols.findIndex(c=>normalize(c)===severities[1]);
-            const heavy = heavyIdx !== -1 ? parseTimeToHours(r[heavyIdx]) : 0;
-            const severe = severeIdx !== -1 ? parseTimeToHours(r[severeIdx]) : 0;
-            regData[reg].heavy += heavy;
-            regData[reg].severe += severe;
-        });
-        const labels = Object.keys(regData);
-        const heavyData = labels.map(l=>regData[l].heavy);
-        const severeData = labels.map(l=>regData[l].severe);
-        window.currentChart = new Chart(ctx, {
-            type:'bar',
-            data:{ labels, datasets:[{label:'Heavy Speeding',data:heavyData,backgroundColor:'#F1C40F'},{label:'Severe Speeding',data:severeData,backgroundColor:'#E74C3C'}] },
-            options:{ plugins:{ title:{ display:true, text:name } }, scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } }
-        });
-        return;
-    }
+        if (filteredEvents.length === 0) {
+            // If no events found, show a message
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('No safety events found in data', canvas.width / 2, canvas.height / 2);
+            return;
+        }
 
-    canvas.classList.add('hidden');
+        window.currentChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: filteredEvents.map(([event]) => event),
+                datasets: [{
+                    label: 'Event Count',
+                    data: filteredEvents.map(([_, count]) => count),
+                    backgroundColor: '#FF6384'
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Safety Event Distribution'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Events'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    } else if (chartType === 'pie') {
+        // Pie Chart: Top 10 drivers by distance
+        if (driverIdx === -1 || distanceIdx === -1) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('Driver or Distance columns not found', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
+        const driverData = [];
+
+        rows.forEach(row => {
+            const driver = row[driverIdx];
+            const distance = parseFloat(row[distanceIdx]) || 0;
+            const score = scoreIdx !== -1 ? parseFloat(row[scoreIdx]) || 0 : 0;
+
+            if (driver && distance > 0) {
+                driverData.push({ driver, distance, score });
+            }
+        });
+
+        if (driverData.length === 0) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('No valid driver distance data found', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
+        // Sort by distance and get top 10
+        const top10 = driverData.sort((a, b) => b.distance - a.distance).slice(0, 10);
+
+        window.currentChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: top10.map(d => d.driver),
+                datasets: [{
+                    data: top10.map(d => d.distance),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                        '#FF9F40', '#FF6B35', '#C9CBCF', '#4BC0C0', '#F7931E'
+                    ]
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Top 10 Drivers by Distance Driven'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const driver = top10[index];
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return [`${driver.driver}`, `Distance: ${value.toFixed(0)} miles (${percentage}%)`, `Safety Score: ${driver.score}`];
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 // Export functions
