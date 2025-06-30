@@ -154,10 +154,11 @@ def build_pdf(
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=16,
+        fontSize=24,
         textColor=colors.HexColor('#000000'),
-        spaceAfter=20,
-        alignment=1  # Center alignment
+        spaceAfter=10,
+        alignment=1,  # Center alignment
+        fontName='Helvetica-Bold'
     )
 
     section_title_style = ParagraphStyle(
@@ -180,8 +181,67 @@ def build_pdf(
 
     story = []
 
-    # Add main title at the very top
-    story.append(Paragraph("COMPLIANCE REPORT", title_style))
+    # Create custom header section
+    from reportlab.platypus import Table as RLTable
+    from reportlab.platypus import TableStyle as RLTableStyle
+    from reportlab.lib.units import inch
+
+    # Add logo/graphic placeholder (the red scribble design)
+    logo_placeholder = Spacer(1, 50)  # Replace with Image('path/to/logo.png', width=100, height=50)
+
+    # Main title
+    story.append(Paragraph("DOT COMPLIANCE SNAPSHOT", title_style))
+    story.append(Spacer(1, 20))
+
+    # Create the date/location/position table
+    header_end_date = end_date or pd.Timestamp.utcnow().date()
+    start_date = header_end_date - pd.Timedelta(days=header_end_date.weekday())
+    end_date_display = start_date + pd.Timedelta(days=6)
+
+    date_range_str = f"{start_date.strftime('%m/%d/%Y')} – {end_date_display.strftime('%m/%d/%Y')}"
+
+    header_data = [
+        [
+            Paragraph(f"<b>Date:</b> {header_end_date.strftime('%B %d, %Y')}", styles['Normal']),
+            Paragraph("<b>Location:</b> All Regions", styles['Normal'])
+        ],
+        [
+            Paragraph("<b>Discussion Type:</b> DOT Compliance", styles['Normal']),
+            Paragraph("<b>Job Positions:</b> Field Crew", styles['Normal'])
+        ]
+    ]
+
+    header_table = RLTable(header_data, colWidths=[doc.width * 0.5, doc.width * 0.5])
+    header_table.setStyle(RLTableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BOX', (0, 0), (-1, -1), 2, colors.black),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+    ]))
+
+    story.append(header_table)
+    story.append(Spacer(1, 30))
+
+    # Add the fleet safety snapshot subtitle with date range
+    fleet_snapshot_title = Paragraph(
+        f"<b>DOT Fleet Safety Snapshot: {date_range_str}</b>",
+        ParagraphStyle(
+            'FleetSnapshotTitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#000000'),
+            alignment=1,  # Center
+            spaceAfter=20
+        )
+    )
+    story.append(fleet_snapshot_title)
     story.append(Spacer(1, 20))
 
     # Dashboard charts arranged in 2x3 grid
@@ -198,9 +258,6 @@ def build_pdf(
 
     # Force page break to start Page 2
     story.append(PageBreak())
-
-    # Add main title on Page 2
-    story.append(Paragraph("DOT COMPLIANCE SNAPSHOT", title_style))
 
     # HOS Violations Summary section
     story.append(Paragraph("<b>HOS Violations Summary:</b>", section_title_style))
