@@ -363,27 +363,24 @@
             uploadForm.style.display = 'none';
 
             try {
-                const resp = await fetch('/generate', {
-                    method: 'POST',
-                    body: formData,
-                    redirect: 'manual'
+                // Don't use fetch for form submission with redirect
+                // Create a temporary form and submit it the traditional way
+                const tempForm = document.createElement('form');
+                tempForm.method = 'POST';
+                tempForm.action = '/generate';
+                tempForm.style.display = 'none';
+
+                // Add files to the form
+                selectedFiles.forEach(file => {
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.name = 'files';
+                    fileInput.files = createFileList([file]);
+                    tempForm.appendChild(fileInput);
                 });
 
-                if (resp.status === 303 || resp.status === 302) {
-                    const redirectUrl = resp.headers.get('Location');
-                    if (redirectUrl) {
-                        window.location.href = redirectUrl;
-                    } else {
-                        throw new Error('No redirect location provided');
-                    }
-                } else if (resp.ok) {
-                    const result = await resp.json();
-                    if (result.redirect) {
-                        window.location.href = result.redirect;
-                    }
-                } else {
-                    throw new Error(`Upload failed with status ${resp.status}`);
-                }
+                document.body.appendChild(tempForm);
+                tempForm.submit();
             } catch (error) {
                 console.error('Upload error:', error);
                 loading.style.display = 'none';
@@ -391,6 +388,13 @@
                 alert('Upload failed: ' + error.message);
             }
         });
+
+        // Helper function to create FileList
+        function createFileList(files) {
+            const dt = new DataTransfer();
+            files.forEach(file => dt.items.add(file));
+            return dt.files;
+        }
     </script>
 </body>
 </html>

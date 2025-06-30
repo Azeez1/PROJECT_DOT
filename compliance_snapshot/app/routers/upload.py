@@ -25,10 +25,14 @@ async def upload_form(request: Request):
 async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)):
     """Save uploaded files and create database tables for each."""
 
+    print(f"DEBUG: Received {len(files)} files")  # Add this debug line
+
     logger = logging.getLogger("upload")
     ticket = uuid.uuid4().hex
     folder = Path(f"/tmp/{ticket}")
     folder.mkdir(parents=True, exist_ok=True)
+
+    print(f"DEBUG: Created folder {folder}")  # Add this debug line
 
     await save_uploads(folder, files)
 
