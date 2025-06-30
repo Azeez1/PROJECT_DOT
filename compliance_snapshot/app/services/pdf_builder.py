@@ -14,6 +14,7 @@ from reportlab.platypus import (
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from reportlab.lib.units import inch
 
 from .report_generator import (
     generate_hos_violations_summary,
