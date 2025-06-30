@@ -10,6 +10,10 @@ from ..services.processors import file_detector
 import sqlite3
 import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
 
@@ -26,28 +30,29 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
     """Save uploaded files and create database tables for each."""
 
     logger = logging.getLogger("upload")
+    logger.info(f"Received {len(files)} files for upload")
 
     # Validate files first
-    if not files or all(not f.filename for f in files):
+    valid_files = [f for f in files if f.filename]
+    if not valid_files:
+        logger.warning("No valid files in upload request")
         raise HTTPException(status_code=400, detail="No files uploaded")
+
+    logger.info(f"Processing {len(valid_files)} valid files")
 
     ticket = uuid.uuid4().hex
     folder = Path(f"/tmp/{ticket}")
     folder.mkdir(parents=True, exist_ok=True)
 
     try:
-        await save_uploads(folder, files)
+        await save_uploads(folder, valid_files)
+        logger.info(f"Saved {len(valid_files)} files to {folder}")
     except Exception as e:
         logger.error(f"Failed to save uploads: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save files: {str(e)}")
 
     db = sqlite3.connect(folder / "snapshot.db")
     errors: list[str] = []
-
-    saved_files = [f for f in files if f.filename]
-    if not saved_files:
-        db.close()
-        raise HTTPException(status_code=400, detail="no files uploaded")
 
     successes: list[str] = []
     failures: dict[str, str] = {}
@@ -57,7 +62,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
         failures[fname] = msg
         logger.error("%s failed: %s", fname, msg)
 
-    for file in saved_files:
+    for file in valid_files:
         file_path = folder / Path(file.filename).name
         if not file_path.is_file():
             failures[file.filename] = "file missing after upload"
@@ -66,6 +71,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
 
         try:
             report_type, df = file_detector.detect_report_type(file_path)
+            logger.info(f"Detected {file.filename} as {report_type}")
         except Exception as exc:
             logger.exception("Failed to read %s", file.filename)
             record_failure(file.filename, exc)
@@ -84,7 +90,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
             errors.append(f"{file.filename}: {exc}")
 
     summary = {
-        "uploaded": len(saved_files),
+        "uploaded": len(valid_files),
         "processed": len(successes),
         "failed": failures,
     }
@@ -101,6 +107,7 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
         (folder / "errors.json").write_text(json.dumps(errors))
 
     from fastapi.responses import RedirectResponse
+    logger.info(f"Redirecting to /wizard/{ticket}")
     return RedirectResponse(f"/wizard/{ticket}", status_code=303)
 
 @router.get("/download/{ticket}", tags=["generate"])
