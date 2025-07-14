@@ -457,27 +457,55 @@ function drawDashboardChart(canvas, tableName, rows, cols, chartType) {
 
   switch(tableName) {
     case 'personnel_conveyance':
-      drawPCChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawPCChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
       break;
     case 'safety_inbox':
-      drawSafetyChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawSafetyChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
       break;
     case 'unassigned_hos':
-      drawUnassignedChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawUnassignedChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
       break;
     case 'driver_behaviors':
-      drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
       break;
     case 'mistdvi':
-      drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
       break;
     case 'driver_safety':
     case 'drivers_safety':
     case 'driver_safety_report':
-      drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
       break;
     default:
-      drawHOSChartForDashboard(ctx, rows, cols, chartType);
+      try {
+        window.drawHOSChartForDashboard(ctx, rows, cols, chartType);
+      } catch (error) {
+        console.error(`Error drawing ${tableName} chart:`, error);
+      }
   }
 }
 
