@@ -396,48 +396,61 @@ if(trendInput){
   });
 }
 
-async function generateDashboardChart(table, container) {
-  try {
-    // Fetch data for this table
-    const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
-    const { columns, rows } = await res.json();
+  async function generateDashboardChart(table, container) {
+    console.log(`Generating dashboard chart for ${table}...`);
 
-    if (!rows.length) return;
+    try {
+      // Fetch data for this table
+      const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
+      const { columns, rows } = await res.json();
+      console.log(`Fetched ${rows.length} rows for ${table}`);
 
-    // Create chart container
-    const chartContainer = document.createElement('div');
-    chartContainer.style.cssText = `
-      background: #f8f9fa;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    `;
+      if (!rows.length) {
+        console.log(`No data for ${table}, skipping`);
+        return;
+      }
 
-    // Add title
-    const title = document.createElement('h3');
-    title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
-    title.style.cssText = 'margin: 0 0 10px 0; color: #2a5298; font-size: 16px;';
-    chartContainer.appendChild(title);
+      // Create chart container
+      const chartContainer = document.createElement('div');
+      chartContainer.style.cssText = `
+        background: #f8f9fa;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      `;
 
-    // Create canvas for chart
-    const canvas = document.createElement('canvas');
-    canvas.id = `dashboard-chart-${table}`;
-    canvas.style.cssText = 'max-height: 300px;';
-    chartContainer.appendChild(canvas);
+      // Add title
+      const title = document.createElement('h3');
+      title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
+      title.style.cssText = 'margin: 0 0 10px 0; color: #2a5298; font-size: 16px;';
+      chartContainer.appendChild(title);
 
-    container.appendChild(chartContainer);
+      // Create canvas for chart
+      const canvas = document.createElement('canvas');
+      canvas.id = `dashboard-chart-${table}`;
+      canvas.style.cssText = 'max-height: 300px;';
+      chartContainer.appendChild(canvas);
 
-    // Determine chart type based on table
-    const chartType = determineChartType(table);
+      container.appendChild(chartContainer);
 
-    // Draw appropriate chart
-    drawDashboardChart(canvas, table, rows, columns, chartType);
+      // Determine chart type based on table
+      const chartType = determineChartType(table);
 
-  } catch (error) {
-    console.error(`Error generating chart for ${table}:`, error);
+      // Draw appropriate chart - GET CONTEXT HERE
+      const ctx = canvas.getContext('2d');
+      console.log(`Drawing ${chartType} chart for ${table}`);
+      drawDashboardChart(ctx, table, rows, columns, chartType);
+
+    } catch (error) {
+      console.error(`Error generating chart for ${table}:`, error);
+
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = 'padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;';
+      errorDiv.textContent = `Failed to load ${TABLE_NAMES[table] || table} chart: ${error.message}`;
+      container.appendChild(errorDiv);
+    }
   }
-}
 
 function determineChartType(table) {
   const chartTypeMap = {
@@ -452,60 +465,36 @@ function determineChartType(table) {
   return chartTypeMap[table] || 'bar';
 }
 
-function drawDashboardChart(canvas, tableName, rows, cols, chartType) {
-  const ctx = canvas.getContext('2d');
-
-  switch(tableName) {
-    case 'personnel_conveyance':
-      try {
+function drawDashboardChart(ctx, tableName, rows, cols, chartType) {
+  console.log(`drawDashboardChart called for ${tableName} with ${rows.length} rows`);
+  try {
+    switch(tableName) {
+      case 'personnel_conveyance':
         window.drawPCChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
-      break;
-    case 'safety_inbox':
-      try {
+        break;
+      case 'safety_inbox':
         window.drawSafetyChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
-      break;
-    case 'unassigned_hos':
-      try {
+        break;
+      case 'unassigned_hos':
         window.drawUnassignedChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
-      break;
-    case 'driver_behaviors':
-      try {
+        break;
+      case 'driver_behaviors':
         window.drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
-      break;
-    case 'mistdvi':
-      try {
+        break;
+      case 'mistdvi':
         window.drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
-      break;
-    case 'driver_safety':
-    case 'drivers_safety':
-    case 'driver_safety_report':
-      try {
+        break;
+      case 'driver_safety':
+      case 'drivers_safety':
+      case 'driver_safety_report':
         window.drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
-      break;
-    default:
-      try {
+        break;
+      default:
         window.drawHOSChartForDashboard(ctx, rows, cols, chartType);
-      } catch (error) {
-        console.error(`Error drawing ${tableName} chart:`, error);
-      }
+    }
+  } catch (error) {
+    console.error(`Error in drawDashboardChart for ${tableName}:`, error);
+    throw error;
   }
 }
 
@@ -562,6 +551,15 @@ async function loadErrors(){
 
 // ---------- open dashboard ----------
 async function openDashboard() {
+  console.log('Opening dashboard...');
+
+  // Check if chart functions are loaded
+  if (!window.drawHOSChartForDashboard) {
+    console.error('Chart functions not loaded! Check if additional-charts.js is included properly');
+    alert('Chart functions not loaded. Please refresh the page.');
+    return;
+  }
+
   // Hide table area and show dashboard area
   document.getElementById('table-area').style.display = 'none';
   document.getElementById('dashboard-area').style.display = 'block';
@@ -579,11 +577,17 @@ async function openDashboard() {
   // Get all available tables
   const res = await fetch(`/api/${ticket}/tables`);
   const tables = await res.json();
+  console.log('Available tables:', tables);
 
   dashboardGrid.innerHTML = '';
   // Generate charts for each table
   for (const table of tables) {
-    await generateDashboardChart(table, dashboardGrid);
+    console.log('Generating chart for table:', table);
+    try {
+      await generateDashboardChart(table, dashboardGrid);
+    } catch (error) {
+      console.error(`Failed to generate chart for ${table}:`, error);
+    }
   }
 }
 
