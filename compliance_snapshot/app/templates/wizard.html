@@ -252,48 +252,59 @@
         padding: 2rem;
     }
 
-    #dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 20px;
-        padding: 20px;
+    .chart-card {
         background: white;
-        border-radius: 12px;
-    }
-
-    #dashboard-grid > div {
-        background: #f8f9fa;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
     }
 
-    #dashboard-grid > div:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    .chart-header {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
     }
 
-    @media (max-width: 768px) {
-        #dashboard-grid {
-            grid-template-columns: 1fr !important;
-        }
+    .chart-header h3 {
+        margin: 0;
+        font-size: 16px;
+        color: #2a5298;
     }
 
-    .spinner {
-        display: inline-block;
-        width: 40px;
-        height: 40px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #2a5298;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+    .chart-body {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
     }
 
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+    .chart-placeholder {
+        color: #999;
+        font-style: italic;
+    }
+
+    .loading-message, .error-message {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 40px;
+    }
+
+    .error-message {
+        background: #fee;
+        border: 1px solid #fcc;
+        border-radius: 8px;
+        color: #c00;
+    }
+
+    #dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        padding: 20px;
     }
   </style>
 </head><body>
@@ -396,349 +407,6 @@ if(trendInput){
   });
 }
 
-  async function generateDashboardChart(table, container) {
-    try {
-      // Fetch data for this table
-      const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
-      const { columns, rows } = await res.json();
-
-      if (!rows.length) return;
-
-      // Create chart container
-      const chartContainer = document.createElement('div');
-      chartContainer.style.cssText = `
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      `;
-
-      // Add title
-      const title = document.createElement('h3');
-      title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
-      title.style.cssText = 'margin: 0 0 15px 0; color: #2a5298; font-size: 18px; font-weight: 600;';
-      chartContainer.appendChild(title);
-
-      // Create canvas for chart
-      const canvas = document.createElement('canvas');
-      canvas.style.cssText = 'max-height: 300px; width: 100%;';
-      chartContainer.appendChild(canvas);
-      container.appendChild(chartContainer);
-
-      const ctx = canvas.getContext('2d');
-      const normalize = s => s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, '_').trim();
-
-      // Create charts based on table type
-      switch(table) {
-        case 'hos':
-          // HOS Violations - Stacked Bar Chart by Violation Type
-          const vtIdx = columns.findIndex(c => normalize(c) === 'violation_type');
-          const tagIdx = columns.findIndex(c => normalize(c) === 'tags');
-
-          if (vtIdx !== -1) {
-            const violationCounts = {};
-            rows.forEach(row => {
-              const vt = row[vtIdx];
-              if (vt) violationCounts[vt] = (violationCounts[vt] || 0) + 1;
-            });
-
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: Object.keys(violationCounts),
-                datasets: [{
-                  label: 'Violation Count',
-                  data: Object.values(violationCounts),
-                  backgroundColor: ['#FF6B35', '#F7931E', '#39FF14', '#00D9FF', '#FF0000']
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'HOS Violations by Type' }
-                }
-              }
-            });
-          }
-          break;
-
-        case 'safety_inbox':
-          // Safety Inbox - Pie Chart by Event Type
-          const eventIdx = columns.findIndex(c => normalize(c) === 'event_type');
-
-          if (eventIdx !== -1) {
-            const eventCounts = {};
-            rows.forEach(row => {
-              const event = row[eventIdx];
-              if (event) eventCounts[event] = (eventCounts[event] || 0) + 1;
-            });
-
-            new Chart(ctx, {
-              type: 'pie',
-              data: {
-                labels: Object.keys(eventCounts).slice(0, 6),
-                datasets: [{
-                  data: Object.values(eventCounts).slice(0, 6),
-                  backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'Safety Events Distribution' }
-                }
-              }
-            });
-          }
-          break;
-
-        case 'personnel_conveyance':
-          // PC Usage - Bar Chart of Top Users
-          const driverIdx = columns.findIndex(c => normalize(c).includes('driver'));
-          const durationIdx = columns.findIndex(c => normalize(c).includes('personal_conveyance') || normalize(c).includes('duration'));
-
-          if (driverIdx !== -1 && durationIdx !== -1) {
-            const driverTotals = {};
-            rows.forEach(row => {
-              const driver = row[driverIdx];
-              const duration = parseFloat(row[durationIdx]) || 0;
-              if (driver) driverTotals[driver] = (driverTotals[driver] || 0) + duration;
-            });
-
-            const sorted = Object.entries(driverTotals)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 10);
-
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: sorted.map(([driver]) => driver),
-                datasets: [{
-                  label: 'PC Hours',
-                  data: sorted.map(([, hours]) => hours),
-                  backgroundColor: sorted.map(([, hours]) => hours > 14 ? '#FF6384' : hours > 10 ? '#FFA500' : '#4CAF50')
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'Top 10 PC Users' }
-                },
-                scales: {
-                  y: { beginAtZero: true }
-                }
-              }
-            });
-          }
-          break;
-
-        case 'unassigned_hos':
-          // Unassigned HOS - Bar Chart by Vehicle
-          const vehicleIdx = columns.findIndex(c => normalize(c) === 'vehicle');
-          const segmentsIdx = columns.findIndex(c => normalize(c).includes('unassigned_segments'));
-
-          if (vehicleIdx !== -1 && segmentsIdx !== -1) {
-            const vehicleSegments = {};
-            rows.forEach(row => {
-              const vehicle = row[vehicleIdx];
-              const segments = parseInt(row[segmentsIdx]) || 0;
-              if (vehicle) vehicleSegments[vehicle] = (vehicleSegments[vehicle] || 0) + segments;
-            });
-
-            const sorted = Object.entries(vehicleSegments)
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 8);
-
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: sorted.map(([vehicle]) => vehicle.length > 30 ? vehicle.slice(0, 27) + '...' : vehicle),
-                datasets: [{
-                  label: 'Unassigned Segments',
-                  data: sorted.map(([, segments]) => segments),
-                  backgroundColor: '#FF6B35'
-                }]
-              },
-              options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'Unassigned Segments by Vehicle' }
-                },
-                scales: {
-                  x: { beginAtZero: true }
-                }
-              }
-            });
-          }
-          break;
-
-        case 'mistdvi':
-          // Missed DVIR - Pie Chart Pre vs Post
-          const typeIdx = columns.findIndex(c => normalize(c) === 'type');
-
-          if (typeIdx !== -1) {
-            let preCount = 0, postCount = 0;
-            rows.forEach(row => {
-              const type = (row[typeIdx] || '').toUpperCase();
-              if (type.includes('PRE')) preCount++;
-              else if (type.includes('POST')) postCount++;
-            });
-
-            new Chart(ctx, {
-              type: 'doughnut',
-              data: {
-                labels: ['Pre-Trip', 'Post-Trip'],
-                datasets: [{
-                  data: [preCount, postCount],
-                  backgroundColor: ['#3498db', '#e74c3c']
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'Missed DVIRs by Type' }
-                }
-              }
-            });
-          }
-          break;
-
-        case 'driver_behaviors':
-          // Driver Behaviors - Safety Score by Region
-          const scoreIdx = columns.findIndex(c => normalize(c).includes('safety_score'));
-          const regionIdx = columns.findIndex(c => normalize(c) === 'tags');
-
-          if (scoreIdx !== -1 && regionIdx !== -1) {
-            const regionScores = {};
-            const regionCounts = {};
-
-            rows.forEach(row => {
-              const score = parseFloat(row[scoreIdx]);
-              const tags = (row[regionIdx] || '').toLowerCase();
-              let region = 'Other';
-
-              if (tags.includes('great lakes') || tags.includes('gl')) region = 'Great Lakes';
-              else if (tags.includes('ohio valley') || tags.includes('ov')) region = 'Ohio Valley';
-              else if (tags.includes('southeast') || tags.includes('se')) region = 'Southeast';
-              else if (tags.includes('midwest') || tags.includes('mw')) region = 'Midwest';
-
-              if (!isNaN(score)) {
-                regionScores[region] = (regionScores[region] || 0) + score;
-                regionCounts[region] = (regionCounts[region] || 0) + 1;
-              }
-            });
-
-            const avgScores = Object.entries(regionScores).map(([region, total]) => ({
-              region,
-              avg: total / regionCounts[region]
-            }));
-
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: avgScores.map(d => d.region),
-                datasets: [{
-                  label: 'Average Safety Score',
-                  data: avgScores.map(d => d.avg),
-                  backgroundColor: avgScores.map(d => d.avg > 90 ? '#4CAF50' : d.avg > 80 ? '#FFC107' : '#F44336')
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'Average Safety Score by Region' }
-                },
-                scales: {
-                  y: { beginAtZero: true, max: 100 }
-                }
-              }
-            });
-          }
-          break;
-
-        case 'driver_safety':
-        case 'drivers_safety':
-          // Driver Safety - Top 10 Drivers by Safety Score
-          const driverNameIdx = columns.findIndex(c => normalize(c).includes('driver_name') || (normalize(c).includes('driver') && !normalize(c).includes('driver_id')));
-          const safetyScoreIdx = columns.findIndex(c => normalize(c).includes('safety_score'));
-
-          if (driverNameIdx !== -1 && safetyScoreIdx !== -1) {
-            const driverScores = [];
-            rows.forEach(row => {
-              const driver = row[driverNameIdx];
-              const score = parseFloat(row[safetyScoreIdx]);
-              if (driver && !isNaN(score)) {
-                driverScores.push({ driver, score });
-              }
-            });
-
-            const top10 = driverScores.sort((a, b) => b.score - a.score).slice(0, 10);
-
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels: top10.map(d => d.driver),
-                datasets: [{
-                  label: 'Safety Score',
-                  data: top10.map(d => d.score),
-                  backgroundColor: top10.map(d => d.score >= 95 ? '#4CAF50' : d.score >= 90 ? '#8BC34A' : '#FFC107')
-                }]
-              },
-              options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: {
-                  title: { display: true, text: 'Top 10 Drivers by Safety Score' }
-                },
-                scales: {
-                  x: { beginAtZero: true, max: 100 }
-                }
-              }
-            });
-          }
-          break;
-
-        default:
-          // Generic bar chart for unknown tables
-          const firstCol = columns[0];
-          const counts = {};
-          rows.forEach(row => {
-            const val = row[0];
-            if (val) counts[val] = (counts[val] || 0) + 1;
-          });
-
-          new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: Object.keys(counts).slice(0, 10),
-              datasets: [{
-                label: 'Count',
-                data: Object.values(counts).slice(0, 10),
-                backgroundColor: '#2a5298'
-              }]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: { display: true, text: `${TABLE_NAMES[table] || table} Overview` }
-              }
-            }
-          });
-      }
-
-    } catch (error) {
-      console.error(`Error generating chart for ${table}:`, error);
-
-      const errorDiv = document.createElement('div');
-      errorDiv.style.cssText = 'padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00; margin-bottom: 20px;';
-      errorDiv.textContent = `Failed to load ${TABLE_NAMES[table] || table} chart: ${error.message}`;
-      container.appendChild(errorDiv);
-    }
-  }
-
-
 // ---------- build tab buttons ----------
 async function loadTabs(){
   const msg = document.getElementById('message');
@@ -792,35 +460,103 @@ async function loadErrors(){
 
 // ---------- open dashboard ----------
 async function openDashboard() {
-  // Hide table area and show dashboard area
   document.getElementById('table-area').style.display = 'none';
   document.getElementById('dashboard-area').style.display = 'block';
   document.getElementById('finalize-form').style.display = 'none';
 
-  // Update active tab styling
   document.querySelectorAll('nav#tabs button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.table === 'dashboard');
   });
 
-  // Clear existing charts
   const dashboardGrid = document.getElementById('dashboard-grid');
-  dashboardGrid.innerHTML = '<div style="text-align:center; padding:40px;"><div class="spinner"></div><p>Loading charts...</p></div>';
+  dashboardGrid.innerHTML = '<div class="loading-message">Loading dashboard...</div>';
 
-  // Get all available tables
-  const res = await fetch(`/api/${ticket}/tables`);
-  const tables = await res.json();
+  try {
+    const response = await fetch(`/api/${ticket}/dashboard-data`);
+    const dashboardData = await response.json();
 
-  // Clear loading message
-  dashboardGrid.innerHTML = '';
-  
-  // Generate charts for each table
-  for (const table of tables) {
-    await generateDashboardChart(table, dashboardGrid);
-  }
+    dashboardGrid.innerHTML = '';
 
-  // If no charts were generated
-  if (dashboardGrid.children.length === 0) {
-    dashboardGrid.innerHTML = '<div style="text-align:center; padding:40px; color:#666;">No data available to display charts.</div>';
+    const chartContainers = {};
+    const reportTypes = [
+      'hos', 'safety_inbox', 'personnel_conveyance',
+      'unassigned_hos', 'mistdvi', 'driver_behaviors', 'driver_safety'
+    ];
+
+    reportTypes.forEach(reportType => {
+      const card = document.createElement('div');
+      card.className = 'chart-card';
+      card.innerHTML = `
+          <div class="chart-header">
+              <h3>${TABLE_NAMES[reportType] || reportType}</h3>
+          </div>
+          <div class="chart-body" id="chart-${reportType}">
+              <div class="chart-placeholder">No data available</div>
+          </div>
+      `;
+      dashboardGrid.appendChild(card);
+      chartContainers[reportType] = card.querySelector(`#chart-${reportType}`);
+    });
+
+    for (const [table, chartConfig] of Object.entries(dashboardData)) {
+      const container = chartContainers[table];
+      if (!container) continue;
+
+      container.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      canvas.style.maxHeight = '250px';
+      container.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+
+      if (chartConfig.type === 'bar') {
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(chartConfig.data),
+            datasets: [{
+              label: 'Count',
+              data: Object.values(chartConfig.data),
+              backgroundColor: '#2a5298'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { title: { display: true, text: chartConfig.title } }
+          }
+        });
+      } else if (chartConfig.type === 'pie') {
+        new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: Object.keys(chartConfig.data),
+            datasets: [{
+              data: Object.values(chartConfig.data),
+              backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56',
+                '#4BC0C0', '#9966FF', '#FF9F40'
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { title: { display: true, text: chartConfig.title } }
+          }
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    dashboardGrid.innerHTML = `
+        <div class="error-message">
+            <h3>Error Loading Dashboard</h3>
+            <p>${error.message}</p>
+            <p>Please check the browser console for more details.</p>
+        </div>
+    `;
   }
 }
 
