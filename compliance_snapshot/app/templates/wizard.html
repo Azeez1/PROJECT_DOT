@@ -341,6 +341,90 @@ if(trendInput){
   });
 }
 
+<<<<<< codex/add-ultra-simple-dashboard-functionality
+=======
+async function generateDashboardChart(table, container, chartType) {
+  try {
+    // Fetch data for this table
+    const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
+    const { columns, rows } = await res.json();
+
+    if (!rows.length) return;
+
+    // Create chart container
+    const chartContainer = document.createElement('div');
+    chartContainer.style.cssText = `
+      background: #f8f9fa;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    `;
+
+    // Add title
+    const title = document.createElement('h3');
+    title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
+    title.style.cssText = 'margin: 0 0 10px 0; color: #2a5298; font-size: 16px;';
+    chartContainer.appendChild(title);
+
+    // Create canvas for chart
+    const canvas = document.createElement('canvas');
+    canvas.id = `dashboard-chart-${table}-${chartType}`;
+    canvas.style.cssText = 'max-height: 300px;';
+    chartContainer.appendChild(canvas);
+
+    container.appendChild(chartContainer);
+
+    // Draw appropriate chart
+    drawDashboardChart(canvas, table, rows, columns, chartType);
+
+  } catch (error) {
+    console.error(`Error generating chart for ${table}:`, error);
+  }
+}
+
+function getChartTypes(table) {
+  const map = {
+    'hos': ['bar', 'line'],
+    'safety_inbox': ['bar', 'pie'],
+    'personnel_conveyance': ['bar', 'pie'],
+    'unassigned_hos': ['bar', 'pie'],
+    'mistdvi': ['bar', 'pie', 'line'],
+    'driver_behaviors': ['bar', 'pie'],
+    'driver_safety': ['bar', 'pie']
+  };
+  return map[table] || ['bar'];
+}
+
+function drawDashboardChart(canvas, tableName, rows, cols, chartType) {
+  const ctx = canvas.getContext('2d');
+
+  switch(tableName) {
+    case 'personnel_conveyance':
+      drawPCChartForDashboard(ctx, rows, cols, chartType);
+      break;
+    case 'safety_inbox':
+      drawSafetyChartForDashboard(ctx, rows, cols, chartType);
+      break;
+    case 'unassigned_hos':
+      drawUnassignedChartForDashboard(ctx, rows, cols, chartType);
+      break;
+    case 'driver_behaviors':
+      drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType);
+      break;
+    case 'mistdvi':
+      drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType);
+      break;
+    case 'driver_safety':
+    case 'drivers_safety':
+    case 'driver_safety_report':
+      drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType);
+      break;
+    default:
+      drawHOSChartForDashboard(ctx, rows, cols, chartType);
+  }
+}
+>>>>>> main
 
 // ---------- build tab buttons ----------
 async function loadTabs(){
@@ -427,6 +511,7 @@ async function showDashboard() {
   const res = await fetch(`/api/${ticket}/tables`);
   const tables = await res.json();
 
+<<<<<< codex/add-ultra-simple-dashboard-functionality
   dashboard.innerHTML = '';
 
   // Generate each chart
@@ -514,6 +599,15 @@ function drawChartDirect(ctx, tableName, rows, cols) {
         maintainAspectRatio: false
       }
     });
+=======
+  dashboardGrid.innerHTML = '';
+  // Generate charts for each table and all supported types
+  for (const table of tables) {
+    const types = getChartTypes(table);
+    for (const t of types) {
+      await generateDashboardChart(table, dashboardGrid, t);
+    }
+>>>>>> main
   }
 }
 
