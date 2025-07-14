@@ -460,102 +460,146 @@ async function loadErrors(){
 
 // ---------- open dashboard ----------
 async function openDashboard() {
+  // Hide table area and show dashboard
   document.getElementById('table-area').style.display = 'none';
   document.getElementById('dashboard-area').style.display = 'block';
   document.getElementById('finalize-form').style.display = 'none';
 
+  // Update active tab highlighting
   document.querySelectorAll('nav#tabs button').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.table === 'dashboard');
   });
 
   const dashboardGrid = document.getElementById('dashboard-grid');
-  dashboardGrid.innerHTML = '<div class="loading-message">Loading dashboard...</div>';
+  dashboardGrid.innerHTML = '<div class="loading-message">Loading all charts...</div>';
 
   try {
-    const response = await fetch(`/api/${ticket}/dashboard-data`);
-    const dashboardData = await response.json();
+    // Fetch the list of all available tables
+    const tablesResponse = await fetch(`/api/${ticket}/tables`);
+    const tables = await tablesResponse.json();
 
+    // Clear the loading message
     dashboardGrid.innerHTML = '';
 
-    const chartContainers = {};
-    const reportTypes = [
-      'hos', 'safety_inbox', 'personnel_conveyance',
-      'unassigned_hos', 'mistdvi', 'driver_behaviors', 'driver_safety'
-    ];
+    // Process each table
+    for (const table of tables) {
+      try {
+        // Fetch the data for this table
+        const dataResponse = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
+        const {columns, rows} = await dataResponse.json();
 
-    reportTypes.forEach(reportType => {
-      const card = document.createElement('div');
-      card.className = 'chart-card';
-      card.innerHTML = `
+        // Skip if no data
+        if (!rows || rows.length === 0) continue;
+
+        // Create a section for this table with both charts
+        const section = document.createElement('div');
+        section.style.cssText = 'grid-column: span 2; margin-bottom: 30px;';
+
+        // Add title for this report type
+        const title = document.createElement('h3');
+        title.style.cssText = 'color: #2a5298; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;';
+        title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
+        section.appendChild(title);
+
+        // Create container for both charts
+        const chartsContainer = document.createElement('div');
+        chartsContainer.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 20px;';
+
+        // Create bar chart container
+        const barChartCard = document.createElement('div');
+        barChartCard.className = 'chart-card';
+        barChartCard.innerHTML = `
           <div class="chart-header">
-              <h3>${TABLE_NAMES[reportType] || reportType}</h3>
+            <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #64748b;">Bar Chart</h4>
           </div>
-          <div class="chart-body" id="chart-${reportType}">
-              <div class="chart-placeholder">No data available</div>
+          <div class="chart-body">
+            <canvas id="${table}-dashboard-bar" style="max-height: 300px;"></canvas>
           </div>
-      `;
-      dashboardGrid.appendChild(card);
-      chartContainers[reportType] = card.querySelector(`#chart-${reportType}`);
-    });
+        `;
 
-    for (const [table, chartConfig] of Object.entries(dashboardData)) {
-      const container = chartContainers[table];
-      if (!container) continue;
+        // Create pie chart container
+        const pieChartCard = document.createElement('div');
+        pieChartCard.className = 'chart-card';
+        pieChartCard.innerHTML = `
+          <div class="chart-header">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #64748b;">Pie Chart</h4>
+          </div>
+          <div class="chart-body">
+            <canvas id="${table}-dashboard-pie" style="max-height: 300px;"></canvas>
+          </div>
+        `;
 
-      container.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      canvas.style.maxHeight = '250px';
-      container.appendChild(canvas);
+        chartsContainer.appendChild(barChartCard);
+        chartsContainer.appendChild(pieChartCard);
+        section.appendChild(chartsContainer);
+        dashboardGrid.appendChild(section);
 
-      const ctx = canvas.getContext('2d');
+        // Use setTimeout to ensure DOM is ready before drawing
+        setTimeout(() => {
+          // Store current global state
+          const originalTableName = window.tableName;
+          const originalChartType = document.getElementById('chart-type').value;
+          const originalCanvas = document.getElementById('preview');
 
-      if (chartConfig.type === 'bar') {
-        new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: Object.keys(chartConfig.data),
-            datasets: [{
-              label: 'Count',
-              data: Object.values(chartConfig.data),
-              backgroundColor: '#2a5298'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { title: { display: true, text: chartConfig.title } }
+          // Temporarily set up the environment for drawChart function
+          window.tableName = table;
+
+          // Create temporary preview canvas since drawChart expects it
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.id = 'preview';
+          tempCanvas.style.display = 'none';
+          document.body.appendChild(tempCanvas);
+
+          // Draw bar chart
+          document.getElementById('chart-type').value = 'bar';
+          window.currentChart = null;
+          drawChart(TABLE_NAMES[table] || table, rows, columns);
+
+          // Copy the chart config to our dashboard canvas
+          if (window.currentChart) {
+            const barCtx = document.getElementById(`${table}-dashboard-bar`).getContext('2d');
+            const barConfig = JSON.parse(JSON.stringify(window.currentChart.config));
+            new Chart(barCtx, barConfig);
           }
-        });
-      } else if (chartConfig.type === 'pie') {
-        new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: Object.keys(chartConfig.data),
-            datasets: [{
-              data: Object.values(chartConfig.data),
-              backgroundColor: [
-                '#FF6384', '#36A2EB', '#FFCE56',
-                '#4BC0C0', '#9966FF', '#FF9F40'
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { title: { display: true, text: chartConfig.title } }
+
+          // Draw pie chart
+          document.getElementById('chart-type').value = 'pie';
+          window.currentChart = null;
+          drawChart(TABLE_NAMES[table] || table, rows, columns);
+
+          // Copy the chart config to our dashboard canvas
+          if (window.currentChart) {
+            const pieCtx = document.getElementById(`${table}-dashboard-pie`).getContext('2d');
+            const pieConfig = JSON.parse(JSON.stringify(window.currentChart.config));
+            new Chart(pieCtx, pieConfig);
           }
-        });
+
+          // Restore original state
+          window.tableName = originalTableName;
+          document.getElementById('chart-type').value = originalChartType;
+          document.body.removeChild(tempCanvas);
+          if (originalCanvas) originalCanvas.id = 'preview';
+          window.currentChart = null;
+
+        }, 100);
+
+      } catch (error) {
+        console.error(`Error loading table ${table}:`, error);
       }
+    }
+
+    // If no tables had data, show a message
+    if (dashboardGrid.children.length === 0) {
+      dashboardGrid.innerHTML = '<div class="error-message">No data available to display</div>';
     }
 
   } catch (error) {
     console.error('Dashboard error:', error);
     dashboardGrid.innerHTML = `
-        <div class="error-message">
-            <h3>Error Loading Dashboard</h3>
-            <p>${error.message}</p>
-            <p>Please check the browser console for more details.</p>
-        </div>
+      <div class="error-message">
+        <h3>Error Loading Dashboard</h3>
+        <p>${error.message}</p>
+      </div>
     `;
   }
 }
