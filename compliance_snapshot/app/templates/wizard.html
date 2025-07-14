@@ -537,18 +537,99 @@ async function openDashboard() {
     btn.classList.toggle('active', btn.dataset.table === 'dashboard');
   });
 
-  // Clear existing charts
+  // Clear existing content
   const dashboardGrid = document.getElementById('dashboard-grid');
-  dashboardGrid.innerHTML = '<div style="text-align:center; padding:40px;"><div class="spinner"></div><p>Loading charts...</p></div>';
+  dashboardGrid.innerHTML = '';
 
   // Get all available tables
   const res = await fetch(`/api/${ticket}/tables`);
   const tables = await res.json();
 
-  dashboardGrid.innerHTML = '';
-  // Generate charts for each table
+  // Create a chart container for each table
   for (const table of tables) {
-    await generateDashboardChart(table, dashboardGrid);
+    await createDashboardChartContainer(table, dashboardGrid);
+  }
+}
+
+async function createDashboardChartContainer(table, container) {
+  try {
+    const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
+    const { columns, rows } = await res.json();
+
+    if (!rows.length) return;
+
+    // Create an isolated container with its own preview canvas
+    const chartWrapper = document.createElement('div');
+    chartWrapper.style.cssText = `
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+    `;
+
+    const title = document.createElement('h3');
+    title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
+    title.style.cssText = 'margin: 0 0 15px 0; color: #2a5298; font-size: 18px; text-align: center;';
+    chartWrapper.appendChild(title);
+
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = '<canvas id="preview" style="max-height: 300px; width: 100%;"></canvas>';
+    chartWrapper.appendChild(tempContainer);
+
+    container.appendChild(chartWrapper);
+
+    const originalPreview = document.getElementById('preview');
+    if (originalPreview && originalPreview !== tempContainer.firstChild) {
+      originalPreview.id = 'preview-temp';
+    }
+
+    window.tableName = table;
+    if (window.currentChart) {
+      window.currentChart.destroy();
+      window.currentChart = null;
+    }
+
+    const chartType = (table === 'mistdvi' || table === 'safety_inbox') ? 'pie' : 'bar';
+
+    switch(table) {
+      case 'personnel_conveyance':
+        if (window.drawPCCharts) window.drawPCCharts(TABLE_NAMES[table] || table, rows, columns, chartType);
+        break;
+      case 'safety_inbox':
+        if (window.drawSafetyCharts) window.drawSafetyCharts(TABLE_NAMES[table] || table, rows, columns, chartType);
+        break;
+      case 'unassigned_hos':
+        if (window.drawUnassignedCharts) window.drawUnassignedCharts(TABLE_NAMES[table] || table, rows, columns, chartType);
+        break;
+      case 'driver_behaviors':
+        if (window.drawDriverBehaviorsCharts) window.drawDriverBehaviorsCharts(TABLE_NAMES[table] || table, rows, columns, chartType);
+        break;
+      case 'mistdvi':
+        if (window.drawMissedDVIRCharts) window.drawMissedDVIRCharts(TABLE_NAMES[table] || table, rows, columns, chartType);
+        break;
+      case 'driver_safety':
+      case 'drivers_safety':
+        if (window.drawDriverSafetyCharts) window.drawDriverSafetyCharts(TABLE_NAMES[table] || table, rows, columns, chartType);
+        break;
+      default:
+        drawChart(TABLE_NAMES[table] || table, rows, columns);
+    }
+
+    const chartCanvas = tempContainer.querySelector('#preview');
+    if (chartCanvas) {
+      chartCanvas.id = `chart-${table}`;
+    }
+
+    if (originalPreview) {
+      originalPreview.id = 'preview';
+    }
+
+    window.currentChart = null;
+
+  } catch (error) {
+    console.error(`Error creating chart for ${table}:`, error);
   }
 }
 
@@ -561,6 +642,11 @@ async function openTab(table){
   document.getElementById('dashboard-area').style.display = 'none';
   document.getElementById('table-area').style.display = 'block';
   document.getElementById('finalize-form').style.display = 'block';
+
+  if (window.currentChart) {
+    window.currentChart.destroy();
+    window.currentChart = null;
+  }
 
   // destroy previous table if present
   if(currentDT){
