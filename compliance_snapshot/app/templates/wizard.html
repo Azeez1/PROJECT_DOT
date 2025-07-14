@@ -252,7 +252,21 @@
         padding: 2rem;
     }
 
+    #dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+        padding: 20px;
+        background: white;
+        border-radius: 12px;
+    }
+
     #dashboard-grid > div {
+        background: #f8f9fa;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -314,14 +328,7 @@
 
     <!-- Dashboard container - hidden by default -->
     <div id="dashboard-area" style="display:none;">
-      <div id="dashboard-grid" style="
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 20px;
-        padding: 20px;
-        background: white;
-        border-radius: 12px;
-      ">
+      <div id="dashboard-grid">
         <!-- Charts will be dynamically inserted here -->
       </div>
     </div>
