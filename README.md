@@ -18,7 +18,7 @@ Generate professional DOT compliance reports in minutes instead of hours. Upload
 1. Visit the app at: `[your-replit-url].repl.co`
 2. Upload your data (single Excel or multiple files)
 3. Click "Generate Report"
-4. Download your PDF compliance report
+4. Download your PDF compliance report (optionally with a Word DOCX version)
 
 ### API Documentation
 Visit `/docs` for interactive API documentation (Swagger UI) or `/redoc` for ReDoc documentation.
@@ -169,6 +169,7 @@ Before generating your report, you can customize:
 - **Flexible Input**: Accepts both CSV and Excel files
 - **Background Processing**: Upload completes immediately, process in background
 - **Download Ready**: PDF optimized for printing and digital sharing
+- **Word Option**: Include a DOCX file alongside the PDF
 
 ## 🛠️ Technical Requirements
 

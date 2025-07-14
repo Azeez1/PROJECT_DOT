@@ -13,7 +13,9 @@ if (buildBtn) {
     };
     const msg = document.getElementById('message');
     msg.textContent = '';
-    const res = await fetch(`/finalize/${wizId}`, {
+    const includeDocx = document.getElementById('include-docx')?.checked;
+    const url = includeDocx ? `/finalize/${wizId}?include_docx=1` : `/finalize/${wizId}`;
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -25,7 +27,7 @@ if (buildBtn) {
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'DOT_Compliance_Snapshot.pdf';
+    a.download = includeDocx ? 'DOT_Compliance_Snapshot.zip' : 'DOT_Compliance_Snapshot.pdf';
     a.click();
   });
 }
