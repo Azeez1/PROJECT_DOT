@@ -396,7 +396,7 @@ if(trendInput){
   });
 }
 
-async function generateDashboardChart(table, container) {
+async function generateDashboardChart(table, container, chartType) {
   try {
     // Fetch data for this table
     const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
@@ -422,14 +422,11 @@ async function generateDashboardChart(table, container) {
 
     // Create canvas for chart
     const canvas = document.createElement('canvas');
-    canvas.id = `dashboard-chart-${table}`;
+    canvas.id = `dashboard-chart-${table}-${chartType}`;
     canvas.style.cssText = 'max-height: 300px;';
     chartContainer.appendChild(canvas);
 
     container.appendChild(chartContainer);
-
-    // Determine chart type based on table
-    const chartType = determineChartType(table);
 
     // Draw appropriate chart
     drawDashboardChart(canvas, table, rows, columns, chartType);
@@ -439,17 +436,17 @@ async function generateDashboardChart(table, container) {
   }
 }
 
-function determineChartType(table) {
-  const chartTypeMap = {
-    'hos': 'bar',
-    'safety_inbox': 'pie',
-    'personnel_conveyance': 'bar',
-    'unassigned_hos': 'bar',
-    'mistdvi': 'pie',
-    'driver_behaviors': 'bar',
-    'driver_safety': 'bar'
+function getChartTypes(table) {
+  const map = {
+    'hos': ['bar', 'line'],
+    'safety_inbox': ['bar', 'pie'],
+    'personnel_conveyance': ['bar', 'pie'],
+    'unassigned_hos': ['bar', 'pie'],
+    'mistdvi': ['bar', 'pie', 'line'],
+    'driver_behaviors': ['bar', 'pie'],
+    'driver_safety': ['bar', 'pie']
   };
-  return chartTypeMap[table] || 'bar';
+  return map[table] || ['bar'];
 }
 
 function drawDashboardChart(canvas, tableName, rows, cols, chartType) {
@@ -553,9 +550,12 @@ async function openDashboard() {
   const tables = await res.json();
 
   dashboardGrid.innerHTML = '';
-  // Generate charts for each table
+  // Generate charts for each table and all supported types
   for (const table of tables) {
-    await generateDashboardChart(table, dashboardGrid);
+    const types = getChartTypes(table);
+    for (const t of types) {
+      await generateDashboardChart(table, dashboardGrid, t);
+    }
   }
 }
 
