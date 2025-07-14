@@ -246,55 +246,6 @@
         transform: translateY(-1px);
     }
 
-    #dashboard-area {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-    }
-
-    #dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 20px;
-        padding: 20px;
-        background: white;
-        border-radius: 12px;
-    }
-
-    #dashboard-grid > div {
-        background: #f8f9fa;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    #dashboard-grid > div:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    @media (max-width: 768px) {
-        #dashboard-grid {
-            grid-template-columns: 1fr !important;
-        }
-    }
-
-    .spinner {
-        display: inline-block;
-        width: 40px;
-        height: 40px;
-        border: 3px solid #f3f3f3;
-        border-top: 3px solid #2a5298;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
   </style>
 </head><body>
   <div class="wizard-header">
@@ -326,12 +277,6 @@
     <!-- DataTable injected here -->
     <div id="table-area"></div>
 
-    <!-- Dashboard container - hidden by default -->
-    <div id="dashboard-area" style="display:none;">
-      <div id="dashboard-grid">
-        <!-- Charts will be dynamically inserted here -->
-      </div>
-    </div>
 
     <label style="display:block;margin:.5rem 0">
       Chart&nbsp;type:
@@ -396,90 +341,6 @@ if(trendInput){
   });
 }
 
-async function generateDashboardChart(table, container) {
-  try {
-    // Fetch data for this table
-    const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(table)}`);
-    const { columns, rows } = await res.json();
-
-    if (!rows.length) return;
-
-    // Create chart container
-    const chartContainer = document.createElement('div');
-    chartContainer.style.cssText = `
-      background: #f8f9fa;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    `;
-
-    // Add title
-    const title = document.createElement('h3');
-    title.textContent = TABLE_NAMES[table] || table.replace(/_/g, ' ');
-    title.style.cssText = 'margin: 0 0 10px 0; color: #2a5298; font-size: 16px;';
-    chartContainer.appendChild(title);
-
-    // Create canvas for chart
-    const canvas = document.createElement('canvas');
-    canvas.id = `dashboard-chart-${table}`;
-    canvas.style.cssText = 'max-height: 300px;';
-    chartContainer.appendChild(canvas);
-
-    container.appendChild(chartContainer);
-
-    // Determine chart type based on table
-    const chartType = determineChartType(table);
-
-    // Draw appropriate chart
-    drawDashboardChart(canvas, table, rows, columns, chartType);
-
-  } catch (error) {
-    console.error(`Error generating chart for ${table}:`, error);
-  }
-}
-
-function determineChartType(table) {
-  const chartTypeMap = {
-    'hos': 'bar',
-    'safety_inbox': 'pie',
-    'personnel_conveyance': 'bar',
-    'unassigned_hos': 'bar',
-    'mistdvi': 'pie',
-    'driver_behaviors': 'bar',
-    'driver_safety': 'bar'
-  };
-  return chartTypeMap[table] || 'bar';
-}
-
-function drawDashboardChart(canvas, tableName, rows, cols, chartType) {
-  const ctx = canvas.getContext('2d');
-
-  switch(tableName) {
-    case 'personnel_conveyance':
-      drawPCChartForDashboard(ctx, rows, cols, chartType);
-      break;
-    case 'safety_inbox':
-      drawSafetyChartForDashboard(ctx, rows, cols, chartType);
-      break;
-    case 'unassigned_hos':
-      drawUnassignedChartForDashboard(ctx, rows, cols, chartType);
-      break;
-    case 'driver_behaviors':
-      drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType);
-      break;
-    case 'mistdvi':
-      drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType);
-      break;
-    case 'driver_safety':
-    case 'drivers_safety':
-    case 'driver_safety_report':
-      drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType);
-      break;
-    default:
-      drawHOSChartForDashboard(ctx, rows, cols, chartType);
-  }
-}
 
 // ---------- build tab buttons ----------
 async function loadTabs(){
@@ -507,12 +368,11 @@ async function loadTabs(){
     nav.appendChild(btn);
   });
 
-  // After creating all data table tabs, add a Dashboard tab
+  // After creating all data table tabs, add a Dashboard button
   const dashboardBtn = document.createElement('button');
   dashboardBtn.type = 'button';
-  dashboardBtn.dataset.table = 'dashboard';
   dashboardBtn.textContent = '📊 Dashboard';
-  dashboardBtn.addEventListener('click', () => openDashboard());
+  dashboardBtn.onclick = showDashboard;
   nav.appendChild(dashboardBtn);
 
   if(tables.length){
@@ -532,32 +392,131 @@ async function loadErrors(){
   div.innerHTML = errs.map(e => `<p>${e}</p>`).join('');
 }
 
-// ---------- open dashboard ----------
-async function openDashboard() {
-  // Hide table area and show dashboard area
-  document.getElementById('table-area').style.display = 'none';
-  document.getElementById('dashboard-area').style.display = 'block';
-  document.getElementById('finalize-form').style.display = 'none';
-
-  // Update active tab styling
+// ---------- simple dashboard ----------
+async function showDashboard() {
+  // Mark dashboard button as active
   document.querySelectorAll('nav#tabs button').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.table === 'dashboard');
+    btn.classList.remove('active');
+    if(btn.textContent.includes('Dashboard')) btn.classList.add('active');
   });
 
-  // Clear existing charts
-  const dashboardGrid = document.getElementById('dashboard-grid');
-  dashboardGrid.innerHTML = '<div style="text-align:center; padding:40px;"><div class="spinner"></div><p>Loading charts...</p></div>';
+  // Hide the normal table view
+  document.getElementById('table-area').style.display = 'none';
+  document.getElementById('preview').style.display = 'none';
 
-  // Get all available tables
+  // Create or show dashboard
+  let dashboard = document.getElementById('dashboard-display');
+  if (!dashboard) {
+    dashboard = document.createElement('div');
+    dashboard.id = 'dashboard-display';
+    dashboard.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    `;
+    document.getElementById('finalize-form').appendChild(dashboard);
+  }
+
+  dashboard.innerHTML = '<h2 style="grid-column: 1/-1; text-align: center;">Loading all charts...</h2>';
+  dashboard.style.display = 'grid';
+
+  // Get all tables
   const res = await fetch(`/api/${ticket}/tables`);
   const tables = await res.json();
 
-  dashboardGrid.innerHTML = '';
-  // Generate charts for each table
+  dashboard.innerHTML = '';
+
+  // Generate each chart
   for (const table of tables) {
-    await generateDashboardChart(table, dashboardGrid);
+    // Create a container for this chart
+    const chartBox = document.createElement('div');
+    chartBox.style.cssText = `
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    `;
+
+    const title = document.createElement('h3');
+    title.textContent = TABLE_NAMES[table] || table;
+    title.style.cssText = 'text-align: center; margin-bottom: 15px; color: #2a5298;';
+    chartBox.appendChild(title);
+
+    // Create a canvas for this chart
+    const canvas = document.createElement('canvas');
+    canvas.width = 500;
+    canvas.height = 300;
+    chartBox.appendChild(canvas);
+
+    dashboard.appendChild(chartBox);
+
+    // Get data and draw chart
+    try {
+      const dataRes = await fetch(`/api/${ticket}/query?table=${table}`);
+      const { columns, rows } = await dataRes.json();
+
+      if (rows.length > 0) {
+        const ctx = canvas.getContext('2d');
+        drawChartDirect(ctx, table, rows, columns);
+      }
+    } catch (e) {
+      console.error(`Error loading ${table}:`, e);
+      canvas.getContext('2d').fillText('Error loading chart', 10, 150);
+    }
   }
 }
+
+function drawChartDirect(ctx, tableName, rows, cols) {
+  const chartType = (tableName === 'mistdvi' || tableName === 'safety_inbox') ? 'pie' : 'bar';
+
+  if (tableName === 'hos') {
+    const vtIdx = cols.findIndex(c => c.toLowerCase().includes('violation'));
+    if (vtIdx !== -1) {
+      const counts = {};
+      rows.forEach(r => {
+        const val = r[vtIdx];
+        if (val) counts[val] = (counts[val] || 0) + 1;
+      });
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(counts),
+          datasets: [{
+            label: 'Count',
+            data: Object.values(counts),
+            backgroundColor: '#3498db'
+          }]
+        },
+        options: {
+          responsive: false,
+          maintainAspectRatio: false
+        }
+      });
+    }
+  } else {
+    new Chart(ctx, {
+      type: chartType,
+      data: {
+        labels: [`${tableName} Records`],
+        datasets: [{
+          label: 'Count',
+          data: [rows.length],
+          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false
+      }
+    });
+  }
+}
+
 
 // ---------- open tab, render table & chart ----------
 async function openTab(table){
@@ -565,9 +524,11 @@ async function openTab(table){
   msg.textContent = '';
 
   // Hide dashboard and show table area
-  document.getElementById('dashboard-area').style.display = 'none';
+  const dashboard = document.getElementById('dashboard-display');
+  if (dashboard) dashboard.style.display = 'none';
+
   document.getElementById('table-area').style.display = 'block';
-  document.getElementById('finalize-form').style.display = 'block';
+  document.getElementById('preview').style.display = 'block';
 
   // destroy previous table if present
   if(currentDT){
