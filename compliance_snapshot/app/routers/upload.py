@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks, HTTPException
+from fastapi import APIRouter, UploadFile, File, Request, BackgroundTasks, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -6,6 +6,7 @@ import uuid
 import json
 
 from ..core.utils import save_uploads, sanitize_for_sql, file_response
+from ..services.docx_builder import pdf_to_docx
 from ..services.processors import file_detector
 import sqlite3
 import logging
@@ -95,11 +96,25 @@ async def generate(background_tasks: BackgroundTasks, files: list[UploadFile] = 
     return RedirectResponse(f"/wizard/{ticket}", status_code=303)
 
 @router.get("/download/{ticket}", tags=["generate"])
-async def download(ticket: str):
-    """Return the generated PDF as a downloadable file."""
+async def download(ticket: str, include_docx: bool = Query(False)):
+    """Return the generated PDF (and optional DOCX) as a downloadable file."""
     pdf_path = Path(f"/tmp/{ticket}/ComplianceSnapshot.pdf")
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="snapshot not found")
+
+    if include_docx:
+        from zipfile import ZipFile
+
+        docx_path = pdf_to_docx(pdf_path)
+        zip_path = pdf_path.with_suffix('.zip')
+        with ZipFile(zip_path, 'w') as zf:
+            zf.write(pdf_path, pdf_path.name)
+            zf.write(docx_path, docx_path.name)
+        return file_response(
+            zip_path,
+            filename=f"DOT_Compliance_{ticket[:8]}.zip",
+            media_type="application/zip",
+        )
 
     # FastAPI adds 'attachment' disposition when filename is provided
     return file_response(
