@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
 from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
@@ -9,6 +9,7 @@ import json
 import pandas as pd
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
+from ..services.docx_builder import pdf_to_docx
 from ..core.utils import file_response
 
 router = APIRouter()
@@ -162,7 +163,7 @@ async def get_dashboard_data(ticket: str):
 
 
 @router.post("/finalize/{wiz_id}")
-async def finalize(wiz_id: str, request: Request):
+async def finalize(wiz_id: str, request: Request, include_docx: bool = Query(False)):
     """Generate and immediately return the PDF snapshot."""
 
     db_file = _db(wiz_id)
@@ -174,6 +175,21 @@ async def finalize(wiz_id: str, request: Request):
     trend_end = payload.get("trend_end")
 
     pdf_path = build_pdf(wiz_id, filters=filters, trend_end=trend_end)
+
+    if include_docx:
+        from zipfile import ZipFile
+
+        docx_path = pdf_to_docx(pdf_path)
+        zip_path = pdf_path.with_suffix('.zip')
+        with ZipFile(zip_path, 'w') as zf:
+            zf.write(pdf_path, pdf_path.name)
+            zf.write(docx_path, docx_path.name)
+        return file_response(
+            zip_path,
+            filename=f"DOT_Compliance_{wiz_id[:8]}.zip",
+            media_type="application/zip",
+        )
+
     return file_response(
         pdf_path,
         filename=f"DOT_Compliance_{wiz_id[:8]}.pdf",
