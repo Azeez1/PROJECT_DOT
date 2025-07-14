@@ -6,6 +6,7 @@ from fastapi.responses import (
 from fastapi.templating import Jinja2Templates
 import sqlite3
 import json
+import pandas as pd
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
 from ..core.utils import file_response
@@ -80,6 +81,40 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
         return JSONResponse({"columns": cols, "rows": rows})
     except Exception as exc:
         raise HTTPException(500, f"query failed: {exc}")
+
+
+@router.get("/api/{ticket}/dashboard-data")
+async def get_dashboard_data(ticket: str):
+    """Return pre-processed data for all dashboard charts."""
+    try:
+        con = sqlite3.connect(_db(ticket))
+        tables = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+
+        dashboard_data: dict[str, dict] = {}
+        for table in tables:
+            query = f'SELECT * FROM "{table}" LIMIT 100'
+            df = pd.read_sql(query, con)
+
+            if table == 'hos':
+                summary = df['violation_type'].value_counts().head(10).to_dict()
+                dashboard_data[table] = {
+                    'type': 'bar',
+                    'data': summary,
+                    'title': 'HOS Violations by Type'
+                }
+            elif table == 'safety_inbox':
+                summary = df['event_type'].value_counts().head(6).to_dict()
+                dashboard_data[table] = {
+                    'type': 'pie',
+                    'data': summary,
+                    'title': 'Safety Events Distribution'
+                }
+            # additional table summaries can be added here
+
+        con.close()
+        return JSONResponse(dashboard_data)
+    except Exception as e:
+        raise HTTPException(500, f"Dashboard data error: {str(e)}")
 
 
 @router.post("/finalize/{wiz_id}")
