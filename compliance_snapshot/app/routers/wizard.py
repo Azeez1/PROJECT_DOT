@@ -109,7 +109,51 @@ async def get_dashboard_data(ticket: str):
                     'data': summary,
                     'title': 'Safety Events Distribution'
                 }
-            # additional table summaries can be added here
+            elif table == 'personnel_conveyance':
+                col = 'driver_name' if 'driver_name' in df.columns else df.columns[0]
+                summary = df[col].value_counts().head(5).to_dict()
+                dashboard_data[table] = {
+                    'type': 'bar',
+                    'data': summary,
+                    'title': 'Top Personal Conveyance Drivers'
+                }
+            elif table == 'unassigned_hos':
+                col = 'vehicle' if 'vehicle' in df.columns else df.columns[0]
+                summary = df[col].value_counts().head(5).to_dict()
+                dashboard_data[table] = {
+                    'type': 'bar',
+                    'data': summary,
+                    'title': 'Unassigned HOS by Vehicle'
+                }
+            elif table == 'mistdvi':
+                col = 'type' if 'type' in df.columns else df.columns[0]
+                summary = df[col].value_counts().head(5).to_dict()
+                dashboard_data[table] = {
+                    'type': 'pie',
+                    'data': summary,
+                    'title': 'Missed DVIR Types'
+                }
+            elif table == 'driver_behaviors':
+                col = 'driver_name' if 'driver_name' in df.columns else df.columns[0]
+                summary = df[col].value_counts().head(5).to_dict()
+                dashboard_data[table] = {
+                    'type': 'bar',
+                    'data': summary,
+                    'title': 'Driver Behaviors by Driver'
+                }
+            elif table == 'driver_safety':
+                if 'driver_id' in df.columns:
+                    col = 'driver_id'
+                elif 'driver_name' in df.columns:
+                    col = 'driver_name'
+                else:
+                    col = df.columns[0]
+                summary = df[col].value_counts().head(5).to_dict()
+                dashboard_data[table] = {
+                    'type': 'bar',
+                    'data': summary,
+                    'title': 'Driver Safety Incidents'
+                }
 
         con.close()
         return JSONResponse(dashboard_data)
