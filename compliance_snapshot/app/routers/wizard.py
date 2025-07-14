@@ -111,49 +111,123 @@ async def get_dashboard_data(ticket: str):
                     'title': 'Safety Events Distribution'
                 }
             elif table == 'personnel_conveyance':
-                col = 'driver_name' if 'driver_name' in df.columns else df.columns[0]
-                summary = df[col].value_counts().head(5).to_dict()
+                # Top 10 drivers by personal conveyance hours
+                driver_col = next((c for c in df.columns if 'driver' in c.lower()), df.columns[0])
+                pc_col = next((c for c in df.columns if 'pc' in c.lower() and ('hour' in c.lower() or 'duration' in c.lower())), None)
+                if not pc_col:
+                    pc_col = next((c for c in df.columns if 'duration' in c.lower()), None)
+
+                def _to_hours(val: str | float | int) -> float:
+                    try:
+                        if pd.isna(val):
+                            return 0.0
+                        sval = str(val)
+                        if ':' in sval:
+                            parts = [float(p) for p in sval.split(':')]
+                            if len(parts) == 3:
+                                return parts[0] + parts[1] / 60 + parts[2] / 3600
+                            if len(parts) == 2:
+                                return parts[0] + parts[1] / 60
+                        return float(sval)
+                    except Exception:
+                        return 0.0
+
+                if pc_col:
+                    df[pc_col] = df[pc_col].apply(_to_hours)
+                    summary = (
+                        df.groupby(driver_col)[pc_col]
+                        .sum()
+                        .sort_values(ascending=False)
+                        .head(10)
+                        .to_dict()
+                    )
+                else:
+                    summary = df[driver_col].value_counts().head(10).to_dict()
+
                 dashboard_data[table] = {
                     'type': 'bar',
                     'data': summary,
-                    'title': 'Top Personal Conveyance Drivers'
+                    'title': 'Top Personal Conveyance Drivers',
                 }
             elif table == 'unassigned_hos':
-                col = 'vehicle' if 'vehicle' in df.columns else df.columns[0]
-                summary = df[col].value_counts().head(5).to_dict()
+                # Top 8 vehicles by unassigned segments
+                vehicle_col = next((c for c in df.columns if 'vehicle' in c.lower()), df.columns[0])
+                seg_col = next((c for c in df.columns if 'unassigned' in c.lower() and 'segment' in c.lower()), None)
+                if seg_col:
+                    df[seg_col] = pd.to_numeric(df[seg_col], errors='coerce').fillna(0)
+                    summary = (
+                        df.groupby(vehicle_col)[seg_col]
+                        .sum()
+                        .sort_values(ascending=False)
+                        .head(8)
+                        .to_dict()
+                    )
+                else:
+                    summary = df[vehicle_col].value_counts().head(8).to_dict()
                 dashboard_data[table] = {
                     'type': 'bar',
                     'data': summary,
-                    'title': 'Unassigned HOS by Vehicle'
+                    'title': 'Unassigned HOS by Vehicle',
                 }
             elif table == 'mistdvi':
-                col = 'type' if 'type' in df.columns else df.columns[0]
-                summary = df[col].value_counts().head(5).to_dict()
+                # Missed DVIRs by type (PRE-TRIP vs POST-TRIP)
+                type_col = next((c for c in df.columns if 'type' in c.lower()), df.columns[0])
+                values = df[type_col].astype(str).str.lower()
+                pre_count = int(values.str.contains('pre').sum())
+                post_count = int(values.str.contains('post').sum())
+                summary = {'PRE-TRIP': pre_count, 'POST-TRIP': post_count}
                 dashboard_data[table] = {
                     'type': 'pie',
                     'data': summary,
-                    'title': 'Missed DVIR Types'
+                    'title': 'Missed DVIR Types',
                 }
             elif table == 'driver_behaviors':
-                col = 'driver_name' if 'driver_name' in df.columns else df.columns[0]
-                summary = df[col].value_counts().head(5).to_dict()
+                # Average safety score by region extracted from tags
+                tag_col = next((c for c in df.columns if 'tag' in c.lower()), None)
+                score_col = next((c for c in df.columns if 'safety_score' in c.lower()), None)
+                if tag_col and score_col:
+                    regions = {
+                        'Great Lakes': ['great lakes', 'gl', 'great_lakes'],
+                        'Ohio Valley': ['ohio valley', 'ov', 'ohio_valley'],
+                        'Southeast': ['southeast', 'se', 'south east'],
+                        'Midwest': ['midwest', 'mw', 'mid west'],
+                        'Corporate': ['corporate', 'corp'],
+                    }
+                    df[score_col] = pd.to_numeric(df[score_col], errors='coerce')
+                    result = {}
+                    for region, patterns in regions.items():
+                        mask = df[tag_col].astype(str).str.lower().str.contains('|'.join(patterns), na=False)
+                        if mask.any():
+                            result[region] = round(df.loc[mask, score_col].mean(), 2)
+                    summary = result
+                else:
+                    summary = {}
                 dashboard_data[table] = {
                     'type': 'bar',
                     'data': summary,
-                    'title': 'Driver Behaviors by Driver'
+                    'title': 'Avg Safety Score by Region',
                 }
             elif table == 'driver_safety':
-                if 'driver_id' in df.columns:
-                    col = 'driver_id'
-                elif 'driver_name' in df.columns:
-                    col = 'driver_name'
-                else:
-                    col = df.columns[0]
-                summary = df[col].value_counts().head(5).to_dict()
+                # Count of safety events across the fleet
+                keywords = [
+                    'harsh_accel', 'harsh_brake', 'harsh_turn', 'mobile_usage',
+                    'inattentive', 'drowsy', 'rolling_stop', 'yield', 'red_light',
+                    'lane_departure', 'obstructed_camera', 'eating', 'smoking',
+                    'no_seat_belt', 'forward_collision',
+                ]
+                event_cols = [c for c in df.columns if any(k in c.lower() for k in keywords)]
+                for col in event_cols:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+                event_totals = df[event_cols].sum().sort_values(ascending=False)
+                summary = {
+                    col.replace('_', ' ').replace('manual', '').title(): int(val)
+                    for col, val in event_totals.head(6).items()
+                    if val > 0
+                }
                 dashboard_data[table] = {
                     'type': 'bar',
                     'data': summary,
-                    'title': 'Driver Safety Incidents'
+                    'title': 'Safety Events Summary',
                 }
 
         con.close()
