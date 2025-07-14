@@ -551,7 +551,7 @@ if(trendInput){
               .slice(0, 8);
 
             new Chart(ctx, {
-              type: 'horizontalBar',
+              type: 'bar',
               data: {
                 labels: sorted.map(([vehicle]) => vehicle.length > 30 ? vehicle.slice(0, 27) + '...' : vehicle),
                 datasets: [{
@@ -561,6 +561,7 @@ if(trendInput){
                 }]
               },
               options: {
+                indexAxis: 'y',
                 responsive: true,
                 plugins: {
                   title: { display: true, text: 'Unassigned Segments by Vehicle' }
@@ -676,7 +677,7 @@ if(trendInput){
             const top10 = driverScores.sort((a, b) => b.score - a.score).slice(0, 10);
 
             new Chart(ctx, {
-              type: 'horizontalBar',
+              type: 'bar',
               data: {
                 labels: top10.map(d => d.driver),
                 datasets: [{
@@ -686,6 +687,7 @@ if(trendInput){
                 }]
               },
               options: {
+                indexAxis: 'y',
                 responsive: true,
                 plugins: {
                   title: { display: true, text: 'Top 10 Drivers by Safety Score' }
