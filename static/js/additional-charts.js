@@ -875,13 +875,15 @@ function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
         const datasets=Object.entries(counts).map(([type,byWeek],i)=>({label:type,data:weekLabels.map(w=>byWeek[w]||0),borderColor:palette[i%palette.length],fill:false}));
         console.log('[HOS Dashboard] Creating line chart with data:', counts);
         console.log('[HOS Dashboard] Chart created');
-        return new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
+        const chart = new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
+        return chart;
     }else{
         const counts={};
         rows.forEach(r=>{ const val=r[vtIdx]; if(val!==null && val!==undefined && String(val).trim().toLowerCase()!=='null'){ counts[val]=(counts[val]||0)+1; }});
         console.log(`[HOS Dashboard] Creating ${chartType} chart with data:`, counts);
         console.log('[HOS Dashboard] Chart created');
-        return new Chart(ctx,{ type:chartType, data:{ labels:Object.keys(counts), datasets:[{ label:'count', data:Object.values(counts) }] } });
+        const chart = new Chart(ctx,{ type:chartType, data:{ labels:Object.keys(counts), datasets:[{ label:'count', data:Object.values(counts) }] } });
+        return chart;
     }
 }
 
