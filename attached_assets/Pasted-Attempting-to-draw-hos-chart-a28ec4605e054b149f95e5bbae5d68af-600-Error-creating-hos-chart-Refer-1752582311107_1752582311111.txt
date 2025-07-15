@@ -1,0 +1,42 @@
+Attempting to draw hos chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating hos chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error
+a28ec4605e054b149f95e5bbae5d68af:568 Attempting to draw safety_inbox chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating safety_inbox chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error
+a28ec4605e054b149f95e5bbae5d68af:568 Attempting to draw personnel_conveyance chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating personnel_conveyance chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error
+a28ec4605e054b149f95e5bbae5d68af:568 Attempting to draw unassigned_hos chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating unassigned_hos chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error
+a28ec4605e054b149f95e5bbae5d68af:568 Attempting to draw mistdvi chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating mistdvi chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error
+a28ec4605e054b149f95e5bbae5d68af:568 Attempting to draw driver_behaviors chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating driver_behaviors chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error
+a28ec4605e054b149f95e5bbae5d68af:568 Attempting to draw driver_safety chart...
+a28ec4605e054b149f95e5bbae5d68af:600 Error creating driver_safety chart: ReferenceError: rows is not defined
+    at openDashboard (a28ec4605e054b149f95e5bbae5d68af:571:51)
+openDashboard @ a28ec4605e054b149f95e5bbae5d68af:600
+await in openDashboard
+(anonymous) @ a28ec4605e054b149f95e5bbae5d68af:440Understand this error

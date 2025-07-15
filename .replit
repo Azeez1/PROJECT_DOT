@@ -15,7 +15,6 @@ run = [
 [[ports]]
 localPort = 8000
 externalPort = 80
-exposeLocalhost = true
 
 [workflows]
 runButton = "Start Application"
