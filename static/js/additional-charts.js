@@ -572,7 +572,7 @@ function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
         return chart;
     }
     const counts={};
-    rows.forEach(r=>{ const d=r[driverIdx]; const t=(r[typeIdx]||'').toUpperCase().includes('PRE')?'PRE-TRIP':'POST-TRIP'; if(!counts[d]){ counts[d]={ 'PRE-TRIP':0,'POST-TRIP':0 }; counts[d][t]+=1; });
+    rows.forEach(r=>{ const d=r[driverIdx]; const t=(r[typeIdx]||'').toUpperCase().includes('PRE')?'PRE-TRIP':'POST-TRIP'; if(!counts[d]){ counts[d]={ 'PRE-TRIP':0,'POST-TRIP':0 }; } counts[d][t]+=1; });
     const sorted=Object.entries(counts).sort((a,b)=>(b[1]['PRE-TRIP']+b[1]['POST-TRIP'])-(a[1]['PRE-TRIP']+a[1]['POST-TRIP'])).slice(0,15);
     const labels=sorted.map(([d])=>d);
     const preData=sorted.map(([ ,v])=>v['PRE-TRIP']);
