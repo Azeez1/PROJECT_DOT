@@ -13,7 +13,7 @@ from ..services.docx_builder import pdf_to_docx
 from ..core.utils import file_response
 
 router = APIRouter()
-templates = Jinja2Templates(directory="compliance_snapshot/app/templates")
+templates = Jinja2Templates(directory="app/templates")
 
 
 def _db(ticket: str) -> Path:
