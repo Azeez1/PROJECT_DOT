@@ -280,6 +280,8 @@
         align-items: center;
         justify-content: center;
         position: relative;
+        min-height: 250px;
+        min-width: 300px;
     }
 
     .chart-placeholder {
@@ -533,26 +535,32 @@ async function openDashboard() {
       console.log(`API response for ${type}:`, res.ok, `Rows: ${rows.length}, Cols: ${columns.length}`);
       container.innerHTML = '';
       const canvas = document.createElement('canvas');
+      // Remove any inline height/width that might be 0
+      canvas.style.width = '100%';
+      canvas.style.height = '250px';
       canvas.style.maxHeight = '250px';
+      canvas.style.display = 'block';
       container.appendChild(canvas);
-      const ctx = canvas.getContext('2d');
-      const draw = chartMap[type];
-      console.log(`Attempting to draw ${type} chart`);
-      console.log(`Container found:`, container);
-      console.log(`Canvas created:`, canvas);
-      console.log(`Canvas dimensions:`, canvas.width, 'x', canvas.height);
-      console.log(`Context obtained:`, !!ctx);
-      try {
-        if (draw) {
-          console.log(`Calling draw function for ${type}`);
-          draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
-          console.log(`Successfully drew ${type} chart`);
-        } else {
-          console.log(`No draw function found for ${type}`);
-        }
-      } catch (error) {
-        console.error(`ERROR drawing ${type} chart:`, error);
-      }
+
+      // Let the browser calculate dimensions
+      setTimeout(() => {
+          // Force canvas to have proper dimensions
+          canvas.width = container.offsetWidth || 350;
+          canvas.height = 250;
+
+          // Get fresh context after setting dimensions
+          const ctx = canvas.getContext('2d');
+
+          const draw = chartMap[type];
+          try {
+            if (draw) {
+              console.log(`Drawing ${type} with canvas size: ${canvas.width}x${canvas.height}`);
+              draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+            }
+          } catch (error) {
+            console.error(`Error drawing ${type} chart:`, error);
+          }
+      }, 100);
     }
 
   } catch (error) {
