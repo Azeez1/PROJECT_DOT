@@ -151,6 +151,16 @@
     #preview.hidden {
         display: none;
     }
+
+    #dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    #dashboard-grid canvas {
+        width: 100%;
+        height: 300px;
+    }
     
     #build-pdf {
         background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
@@ -356,6 +366,8 @@ async function loadTabs(){
 
   nav.innerHTML = '';
 
+  window.allTables = tables;
+
   tables.forEach((name, index) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -364,6 +376,13 @@ async function loadTabs(){
     btn.addEventListener('click', () => openTab(name));
     nav.appendChild(btn);
   });
+
+  const dash = document.createElement('button');
+  dash.type = 'button';
+  dash.id = 'dashboard-tab';
+  dash.textContent = 'Dashboard';
+  dash.addEventListener('click', openDashboard);
+  nav.appendChild(dash);
 
   if(tables.length){
     openTab(tables[0]);
@@ -382,6 +401,64 @@ async function loadErrors(){
   div.innerHTML = errs.map(e => `<p>${e}</p>`).join('');
 }
 
+// ---------- dashboard view ----------
+async function openDashboard(){
+  const msg = document.getElementById('message');
+  msg.textContent = '';
+
+  if(currentDT){
+    currentDT.destroy();
+    currentDT = null;
+  }
+
+  // highlight dashboard button
+  document.querySelectorAll('nav#tabs button').forEach(btn => {
+    btn.classList.toggle('active', btn.id === 'dashboard-tab');
+  });
+
+  const area = document.getElementById('table-area');
+  area.innerHTML = '<div id="dashboard-grid"></div>';
+  const grid = document.getElementById('dashboard-grid');
+
+  const preview = document.getElementById('preview');
+  if(preview){
+    preview.id = 'preview-original';
+    preview.classList.add('hidden');
+  }
+
+  const typeSel = document.getElementById('chart-type');
+  const origType = typeSel.value;
+
+  const cache = window.dashboardData || (window.dashboardData = {});
+  window.dashboardCharts = [];
+
+  for(const tbl of window.allTables || []){
+    if(!cache[tbl]){
+      try{
+        const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(tbl)}`);
+        if(!res.ok) throw new Error('api');
+        cache[tbl] = await res.json();
+      }catch(e){
+        continue;
+      }
+    }
+    const {columns, rows} = cache[tbl];
+    const canvas = document.createElement('canvas');
+    canvas.id = 'preview';
+    grid.appendChild(canvas);
+
+    const chartType = {'safety_inbox':'pie','mistdvi':'pie'}[tbl] || 'bar';
+    typeSel.value = chartType;
+    window.tableName = tbl;
+    drawChart(TABLE_NAMES[tbl] || tbl.replace(/_/g,' '), rows, columns);
+    window.dashboardCharts.push(window.currentChart);
+    canvas.id = `${tbl}-chart`;
+    window.currentChart = null;
+  }
+
+  typeSel.value = origType;
+}
+
 // ---------- open tab, render table & chart ----------
 async function openTab(table){
   const msg = document.getElementById('message');
@@ -393,6 +470,11 @@ async function openTab(table){
     document.getElementById('table-area').innerHTML = '';
     currentDT = null;
   }
+
+  const dash = document.getElementById('dashboard-grid');
+  if(dash) dash.remove();
+  const orig = document.getElementById('preview-original');
+  if(orig) orig.id = 'preview';
 
   let columns, rows;
   try{
