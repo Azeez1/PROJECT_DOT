@@ -483,6 +483,33 @@ async function openDashboard(){
     window.dashboardCharts.push(window.currentChart);
     canvas.id = `${tbl}-chart`;
     window.currentChart = null;
+
+    // ----- alternate chart type -----
+    const altCanvas = document.createElement('canvas');
+    altCanvas.width = 500;
+    altCanvas.height = 300;
+    altCanvas.style.cssText = 'width: 100%; height: auto; max-width: 500px;';
+
+    const altContainer = document.createElement('div');
+    altContainer.style.cssText = container.style.cssText;
+
+    const altTitle = document.createElement('h3');
+    altTitle.style.cssText = title.style.cssText;
+    const altChartType = chartType === 'bar' ? 'pie' : 'bar';
+    const altTitleText = `${TABLE_NAMES[tbl]} (${altChartType.charAt(0).toUpperCase() + altChartType.slice(1)} Chart)`;
+    altTitle.textContent = altTitleText;
+    altContainer.appendChild(altTitle);
+    altContainer.appendChild(altCanvas);
+    grid.appendChild(altContainer);
+
+    // draw alternate chart using same functions
+    altCanvas.id = 'preview';
+    typeSel.value = altChartType;
+    window.tableName = tbl;
+    drawChart(altTitleText, rows, columns);
+    window.dashboardCharts.push(window.currentChart);
+    altCanvas.id = `${tbl}-chart-alt`;
+    window.currentChart = null;
   }
 
   typeSel.value = origType;
