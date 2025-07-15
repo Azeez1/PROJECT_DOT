@@ -568,44 +568,59 @@ async function openDashboard() {
             // Get context
             const ctx = canvas.getContext('2d');
 
-            // Draw chart immediately (no setTimeout)
-            const draw = chartMap[type];
-            if (draw) {
-                try {
-                    console.log(`Attempting to draw ${type} chart...`);
+            // Fetch data for this specific table type
+            try {
+                console.log(`Fetching data for ${type}...`);
+                const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
+                if (!res.ok) throw new Error(`Failed to fetch data for ${type}`);
+                const {columns, rows} = await res.json();
+                console.log(`Fetched ${rows.length} rows for ${type}`);
 
-                    // Call the draw function and capture result
-                    let chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+                // Draw chart immediately (no setTimeout)
+                const draw = chartMap[type];
+                if (draw) {
+                    try {
+                        console.log(`Attempting to draw ${type} chart...`);
 
-                    // If no chart returned, create a fallback chart
-                    if (!chartInstance) {
-                        console.log(`No chart returned for ${type}, creating fallback...`);
-                        chartInstance = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: ['No Data'],
-                                datasets: [{
-                                    label: type,
-                                    data: [1],
-                                    backgroundColor: '#ff6384'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false
-                            }
-                        });
+                        // Call the draw function and capture result
+                        let chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+
+                        // If no chart returned, create a fallback chart
+                        if (!chartInstance) {
+                            console.log(`No chart returned for ${type}, creating fallback...`);
+                            chartInstance = new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: ['No Data'],
+                                    datasets: [{
+                                        label: type,
+                                        data: [1],
+                                        backgroundColor: '#ff6384'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false
+                                }
+                            });
+                        }
+
+                        console.log(`${type} chart created:`, !!chartInstance);
+
+                        // Store the chart
+                        if (!window.dashboardCharts) window.dashboardCharts = {};
+                        window.dashboardCharts[type] = chartInstance;
+
+                    } catch (error) {
+                        console.error(`Error creating ${type} chart:`, error);
                     }
-
-                    console.log(`${type} chart created:`, !!chartInstance);
-
-                    // Store the chart
-                    if (!window.dashboardCharts) window.dashboardCharts = {};
-                    window.dashboardCharts[type] = chartInstance;
-
-                } catch (error) {
-                    console.error(`Error creating ${type} chart:`, error);
+                } else {
+                    console.warn(`No chart function found for ${type}`);
                 }
+            } catch (error) {
+                console.error(`Error fetching data for ${type}:`, error);
+                // Create error placeholder
+                container.innerHTML = '<div class="chart-placeholder">Error loading data</div>';
             }
     }
 
