@@ -18,14 +18,14 @@
         padding: 0;
         box-sizing: border-box;
     }
-    
+
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: #f0f4f8;
         color: #334155;
         line-height: 1.6;
     }
-    
+
     .wizard-header {
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         color: white;
@@ -33,7 +33,7 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin-bottom: 2rem;
     }
-    
+
     .wizard-header h2 {
         max-width: 1200px;
         margin: 0 auto;
@@ -41,20 +41,20 @@
         font-size: 2rem;
         font-weight: 300;
     }
-    
+
     #finalize-form {
         max-width: 1200px;
         margin: 0 auto;
         padding: 0 2rem;
     }
-    
+
     nav#tabs {
         display: flex;
         gap: 0.5rem;
         margin-bottom: 2rem;
         flex-wrap: wrap;
     }
-    
+
     nav button {
         background: white;
         border: 2px solid #e2e8f0;
@@ -66,20 +66,20 @@
         cursor: pointer;
         transition: all 0.3s ease;
     }
-    
+
     nav button:hover {
         border-color: #2a5298;
         color: #2a5298;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(42, 82, 152, 0.15);
     }
-    
+
     nav button.active {
         background: #2a5298;
         color: white;
         border-color: #2a5298;
     }
-    
+
     #table-area {
         background: white;
         border-radius: 12px;
@@ -87,14 +87,14 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         margin-bottom: 2rem;
     }
-    
+
     #filters {
         display: flex;
         gap: 1rem;
         margin-bottom: 1.5rem;
         flex-wrap: wrap;
     }
-    
+
     #filters select {
         padding: 0.5rem 1rem;
         border: 2px solid #e2e8f0;
@@ -114,12 +114,12 @@
         white-space: normal;
         overflow-wrap: anywhere;
     }
-    
+
     #filters select:focus {
         outline: none;
         border-color: #2a5298;
     }
-    
+
     label {
         display: flex;
         align-items: center;
@@ -128,7 +128,7 @@
         font-size: 0.875rem;
         margin: 1rem 0;
     }
-    
+
     select#chart-type, input#trend-end {
         padding: 0.5rem 1rem;
         border: 2px solid #e2e8f0;
@@ -137,7 +137,7 @@
         color: #334155;
         font-size: 0.875rem;
     }
-    
+
     #preview {
         width: 100%;
         max-width: 540px;
@@ -147,11 +147,11 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    
+
     #preview.hidden {
         display: none;
     }
-    
+
     #build-pdf {
         background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
         color: white;
@@ -165,26 +165,26 @@
         margin: 2rem 0;
         display: block;
     }
-    
+
     #build-pdf:hover {
         transform: translateY(-2px);
         box-shadow: 0 10px 20px rgba(42, 82, 152, 0.3);
     }
-    
+
     #build-pdf:active {
         transform: translateY(0);
     }
-    
+
     /* DataTables styling overrides */
     .dataTables_wrapper {
         margin-top: 1rem;
     }
-    
+
     table.dataTable {
         border-collapse: collapse;
         width: 100%;
     }
-    
+
     table.dataTable thead th {
         background: #f8fafc;
         color: #475569;
@@ -193,32 +193,32 @@
         padding: 0.75rem 1rem;
         border-bottom: 2px solid #e2e8f0;
     }
-    
+
     table.dataTable tbody td {
         padding: 0.75rem 1rem;
         border-bottom: 1px solid #f1f5f9;
         white-space: normal;   /* allow long text to wrap */
         word-break: break-word;
     }
-    
+
     table.dataTable tbody tr:hover {
         background: #f8fafc;
     }
-    
+
     .dataTables_filter input {
         padding: 0.5rem 1rem;
         border: 2px solid #e2e8f0;
         border-radius: 6px;
         margin-left: 0.5rem;
     }
-    
+
     .dataTables_length select {
         padding: 0.25rem 0.5rem;
         border: 2px solid #e2e8f0;
         border-radius: 6px;
         margin: 0 0.5rem;
     }
-    
+
     #monday-note {
         color: #ef4444;
         font-style: italic;
@@ -552,52 +552,61 @@ async function openDashboard() {
 
     for (const type of reportTypes) {
       const container = document.querySelector(`#chart-${type}`);
-      if (!container) continue;
-      const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
-      if (!res.ok) continue;
-      const { columns, rows } = await res.json();
-      console.log(`API response for ${type}:`, res.ok, `Rows: ${rows.length}, Cols: ${columns.length}`);
-      container.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      // Remove any inline height/width that might be 0
-      canvas.style.width = '100%';
-      canvas.style.height = '250px';
-      canvas.style.maxHeight = '250px';
-      canvas.style.display = 'block';
-      container.appendChild(canvas);
+            if (!container) continue;
 
-      // Let the browser calculate dimensions
-      setTimeout(() => {
-          const ctx = canvas.getContext('2d');
-          const draw = chartMap[type];
-          try {
+            // Clear the container first
+            container.innerHTML = '';
+
+            // Create canvas with explicit size
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;  // Set explicit width
+            canvas.height = 250; // Set explicit height
+            canvas.style.width = '100%';
+            canvas.style.height = '250px';
+            container.appendChild(canvas);
+
+            // Get context
+            const ctx = canvas.getContext('2d');
+
+            // Draw chart immediately (no setTimeout)
+            const draw = chartMap[type];
             if (draw) {
-              console.log(`Drawing ${type}...`);
-              const chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
-              console.log(`${type} chart instance:`, chartInstance);
-              if (chartInstance && chartInstance.canvas) {
-                chartInstance.resize(350, 250);
-                console.log(`Resized ${type} chart to 350x250`);
-              }
-              if (!window.dashboardCharts) window.dashboardCharts = {};
-              window.dashboardCharts[type] = chartInstance;
-            }
-          } catch (error) {
-            console.error(`Error drawing ${type} chart:`, error);
-          }
-      }, 100);
+                try {
+                    console.log(`Attempting to draw ${type} chart...`);
 
-      setTimeout(() => {
-          const checkCanvas = document.querySelector(`#chart-${type} canvas`);
-          console.log(`Canvas visibility check for ${type}:`, {
-              element: checkCanvas,
-              width: checkCanvas?.width,
-              height: checkCanvas?.height,
-              style: checkCanvas?.style.cssText,
-              parent: checkCanvas?.parentElement,
-              isVisible: checkCanvas?.offsetWidth > 0 && checkCanvas?.offsetHeight > 0
-          });
-      }, 200);
+                    // Call the draw function and capture result
+                    let chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+
+                    // If no chart returned, create a fallback chart
+                    if (!chartInstance) {
+                        console.log(`No chart returned for ${type}, creating fallback...`);
+                        chartInstance = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['No Data'],
+                                datasets: [{
+                                    label: type,
+                                    data: [1],
+                                    backgroundColor: '#ff6384'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                    }
+
+                    console.log(`${type} chart created:`, !!chartInstance);
+
+                    // Store the chart
+                    if (!window.dashboardCharts) window.dashboardCharts = {};
+                    window.dashboardCharts[type] = chartInstance;
+
+                } catch (error) {
+                    console.error(`Error creating ${type} chart:`, error);
+                }
+            }
     }
 
   } catch (error) {
