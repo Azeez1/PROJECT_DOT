@@ -1,5 +1,6 @@
 const wizId   = location.pathname.split('/').pop();
 const buildBtn = document.getElementById('build-pdf');
+const wordChk = document.getElementById('include-word');
 
 // global object updated by table.js
 window.activeFilters = window.activeFilters || {};
@@ -10,6 +11,7 @@ if (buildBtn) {
     const payload = {
       filters: window.activeFilters,
       trend_end: document.getElementById('trend-end')?.value || null,
+      include_word: wordChk?.checked || false,
     };
     const msg = document.getElementById('message');
     msg.textContent = '';
@@ -25,7 +27,11 @@ if (buildBtn) {
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'DOT_Compliance_Snapshot.pdf';
+    if (wordChk?.checked) {
+      a.download = 'DOT_Compliance_Snapshot.zip';
+    } else {
+      a.download = 'DOT_Compliance_Snapshot.pdf';
+    }
     a.click();
   });
 }
