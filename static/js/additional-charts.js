@@ -90,10 +90,14 @@ function drawPCCharts(name, rows, cols, chartType) {
 }
 
 function drawPCChartForDashboard(ctx, rows, cols, chartType) {
-    if (!rows.length) return;
+    console.log(`[PC Dashboard] Starting with ${rows.length} rows`);
     const driverIdx = cols.findIndex(c => normalize(c) === 'driver_name');
     const durationIdx = cols.findIndex(c => normalize(c).startsWith('personal_conveyance'));
-    if (driverIdx === -1 || durationIdx === -1) return;
+    console.log(`[PC Dashboard] driverIdx=${driverIdx}, durationIdx=${durationIdx}`);
+    if (driverIdx === -1 || durationIdx === -1) {
+        console.log('[PC Dashboard] Required columns not found');
+        return;
+    }
     const totals = {};
     rows.forEach(r => {
         const d = r[driverIdx];
@@ -108,14 +112,19 @@ function drawPCChartForDashboard(ctx, rows, cols, chartType) {
         const data = top.map(([,h])=>h);
         if(others>0){ labels.push('Others'); data.push(others); }
         const colors = labels.map((_,i)=>`hsl(${i*40},70%,60%)`);
-        new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
-        return;
+        console.log('[PC Dashboard] Creating pie chart with data:', data);
+        const chart = new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
+        console.log('[PC Dashboard] Chart created:', chart);
+        return chart;
     }
     const top = sorted.slice(0,15);
     const labels = top.map(([d])=>d);
     const data = top.map(([,h])=>h);
     const colors = data.map(h=>h>14?'red':h>10?'orange':'green');
-    new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Hours', data, backgroundColor:colors }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+    console.log('[PC Dashboard] Creating bar chart with data:', data);
+    const chart = new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Hours', data, backgroundColor:colors }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+    console.log('[PC Dashboard] Chart created:', chart);
+    return chart;
 }
 
 // Safety Inbox Charts
@@ -184,11 +193,15 @@ function drawSafetyCharts(name, rows, cols, chartType) {
 }
 
 function drawSafetyChartForDashboard(ctx, rows, cols, chartType) {
-    if (!rows.length) return;
+    console.log(`[Safety Dashboard] Starting with ${rows.length} rows`);
     const typeIdx = cols.findIndex(c => normalize(c) === 'event_type');
     const statusIdx = cols.findIndex(c => normalize(c) === 'status');
     const tagIdx = cols.findIndex(c => normalize(c) === 'driver_tags');
-    if (typeIdx === -1 || tagIdx === -1) return;
+    console.log(`[Safety Dashboard] typeIdx=${typeIdx}, statusIdx=${statusIdx}, tagIdx=${tagIdx}`);
+    if (typeIdx === -1 || tagIdx === -1) {
+        console.log('[Safety Dashboard] Required columns missing');
+        return;
+    }
     if (chartType === 'bar' && statusIdx !== -1) {
         const counts = {};
         rows.forEach(r => {
@@ -202,8 +215,10 @@ function drawSafetyChartForDashboard(ctx, rows, cols, chartType) {
         const statuses = ['Dismissed','Reviewed','Other'];
         const colors = { Dismissed:'#00D9FF', Reviewed:'#FF6B35', Other:'#FF0000' };
         const datasets = statuses.map(s => ({ label:s, data: labels.map(l=>counts[l][s]), backgroundColor: colors[s] }));
-        new Chart(ctx,{ type:'bar', data:{ labels, datasets }, options:{ scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } } });
-        return;
+        console.log('[Safety Dashboard] Creating bar chart with data:', counts);
+        const chart = new Chart(ctx,{ type:'bar', data:{ labels, datasets }, options:{ scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } } });
+        console.log('[Safety Dashboard] Chart created:', chart);
+        return chart;
     }
     const regions = ['Great Lakes','Ohio Valley','Southeast','Midwest','Corporate','Gulf Coast'];
     const counts = {};
@@ -218,7 +233,10 @@ function drawSafetyChartForDashboard(ctx, rows, cols, chartType) {
     const labels = Object.keys(counts);
     const data = labels.map(l=>counts[l]);
     const colors = labels.map((_,i)=>`hsl(${i*40},70%,60%)`);
-    new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
+    console.log('[Safety Dashboard] Creating pie chart with data:', counts);
+    const chart = new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
+    console.log('[Safety Dashboard] Chart created:', chart);
+    return chart;
 }
 
 // Unassigned HOS Charts
@@ -286,12 +304,16 @@ function drawUnassignedCharts(name, rows, cols, chartType) {
 }
 
 function drawUnassignedChartForDashboard(ctx, rows, cols, chartType) {
-    if (!rows.length) return;
+    console.log(`[Unassigned Dashboard] Starting with ${rows.length} rows`);
     const vehicleIdx = cols.findIndex(c => normalize(c) === 'vehicle');
     const timeIdx = cols.findIndex(c => normalize(c) === 'unassigned_time');
     const segIdx = cols.findIndex(c => normalize(c) === 'unassigned_segments');
     const tagIdx = cols.findIndex(c => normalize(c) === 'tags');
-    if (vehicleIdx === -1 || timeIdx === -1) return;
+    console.log(`[Unassigned Dashboard] vehicleIdx=${vehicleIdx}, timeIdx=${timeIdx}, segIdx=${segIdx}, tagIdx=${tagIdx}`);
+    if (vehicleIdx === -1 || timeIdx === -1) {
+        console.log('[Unassigned Dashboard] Required columns missing');
+        return;
+    }
     const parseHours = str => {
         if (typeof str !== 'string') return parseFloat(str) || 0;
         const m = str.match(/(\d+)h/); const h = m ? parseInt(m[1],10) : 0;
@@ -312,8 +334,10 @@ function drawUnassignedChartForDashboard(ctx, rows, cols, chartType) {
         const labels = Object.keys(counts);
         const data = labels.map(l => counts[l]);
         const colors = labels.map((_,i)=>`hsl(${i*40},70%,60%)`);
-        new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
-        return;
+        console.log('[Unassigned Dashboard] Creating pie chart with data:', counts);
+        const chart = new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
+        console.log('[Unassigned Dashboard] Chart created:', chart);
+        return chart;
     }
     const totals = {};
     rows.forEach(r => {
@@ -325,7 +349,10 @@ function drawUnassignedChartForDashboard(ctx, rows, cols, chartType) {
     const labels = sorted.map(([v]) => v.length > 30 ? v.slice(0,27)+'...' : v);
     const data = sorted.map(([,h]) => h);
     const colors = data.map(()=>'#FF6384');
-    new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Hours', data, backgroundColor:colors }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+    console.log('[Unassigned Dashboard] Creating bar chart with data:', data);
+    const chart = new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Hours', data, backgroundColor:colors }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+    console.log('[Unassigned Dashboard] Chart created:', chart);
+    return chart;
 }
 
 // Driver Safety Behaviors Charts
@@ -399,19 +426,26 @@ function drawDriverBehaviorsCharts(name, rows, cols, chartType) {
 }
 
 function drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType) {
+    console.log(`[Behaviors Dashboard] Starting with ${rows.length} rows`);
     if (!rows.length) return;
     const tagsIdx = cols.findIndex(c => normalize(c) === 'tags');
     const scoreIdx = cols.findIndex(c => normalize(c).includes('safety_score'));
     const driverIdx = cols.findIndex(c => normalize(c).includes('driver'));
-    if (scoreIdx === -1 || driverIdx === -1) return;
+    console.log(`[Behaviors Dashboard] tagsIdx=${tagsIdx}, scoreIdx=${scoreIdx}, driverIdx=${driverIdx}`);
+    if (scoreIdx === -1 || driverIdx === -1) {
+        console.log('[Behaviors Dashboard] Required columns missing');
+        return;
+    }
     if (chartType === 'pie' && tagsIdx !== -1) {
         const counts = {};
         rows.forEach(r => { const reg = extractRegion(r[tagsIdx]); counts[reg] = (counts[reg]||0)+1; });
         const labels = Object.keys(counts);
         const data = labels.map(l=>counts[l]);
         const colors = labels.map((_,i)=>`hsl(${i*40},70%,60%)`);
-        new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
-        return;
+        console.log('[Behaviors Dashboard] Creating pie chart with data:', counts);
+        const chart = new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:colors }] } });
+        console.log('[Behaviors Dashboard] Chart created:', chart);
+        return chart;
     }
     if (tagsIdx !== -1) {
         const regionScores = {};
@@ -425,15 +459,20 @@ function drawDriverBehaviorsChartForDashboard(ctx, rows, cols, chartType) {
             const labels = Object.keys(regionScores);
             const data = labels.map(l=>regionScores[l]/regionCounts[l]);
             const colors = data.map(v => v>90?'green':v>=80?'yellow':'red');
-            new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Safety Score', data, backgroundColor:colors }] }, options:{ scales:{ y:{ beginAtZero:true, max:100 } } } });
-            return;
+            console.log('[Behaviors Dashboard] Creating bar chart with regional scores:', data);
+            const chart = new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Safety Score', data, backgroundColor:colors }] }, options:{ scales:{ y:{ beginAtZero:true, max:100 } } } });
+            console.log('[Behaviors Dashboard] Chart created:', chart);
+            return chart;
         }
     }
     const scores = rows.map(r => { const sc=parseFloat(r[scoreIdx]); const d=r[driverIdx]; if(!isNaN(sc)&&d) return {d,sc}; }).filter(Boolean).sort((a,b)=>a.sc-b.sc).slice(0,10);
     if(!scores.length) return;
     const labels = scores.map(s=>s.d);
     const data = scores.map(s=>s.sc);
-    new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Safety Score', data, backgroundColor:'#FF6384' }] }, options:{ indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100 } } } });
+    console.log('[Behaviors Dashboard] Creating bar chart with data:', data);
+    const chart = new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{ label:'Safety Score', data, backgroundColor:'#FF6384' }] }, options:{ indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100 } } } });
+    console.log('[Behaviors Dashboard] Chart created:', chart);
+    return chart;
 }
 
 // Missed DVIR Charts
@@ -507,18 +546,25 @@ function drawMissedDVIRCharts(name, rows, cols, chartType) {
 }
 
 function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
+    console.log(`[DVIR Dashboard] Starting with ${rows.length} rows`);
     if (!rows.length) return;
     const driverIdx = cols.findIndex(c => normalize(c).includes('driver'));
     const typeIdx = cols.findIndex(c => normalize(c) === 'type');
     const startIdx = cols.findIndex(c => normalize(c).startsWith('start_time'));
-    if (driverIdx === -1 || typeIdx === -1) return;
+    console.log(`[DVIR Dashboard] driverIdx=${driverIdx}, typeIdx=${typeIdx}, startIdx=${startIdx}`);
+    if (driverIdx === -1 || typeIdx === -1) {
+        console.log('[DVIR Dashboard] Required columns missing');
+        return;
+    }
     if (chartType === 'pie') {
         let pre=0, post=0;
         rows.forEach(r=>{ const t=(r[typeIdx]||'').toUpperCase(); if(t.includes('PRE')) pre++; else if(t.includes('POST')) post++; });
         const labels=['PRE-TRIP','POST-TRIP'];
         const data=[pre,post];
-        new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:['#3498db','#e74c3c'] }] } });
-        return;
+        console.log('[DVIR Dashboard] Creating pie chart with data:', {pre,post});
+        const chart = new Chart(ctx,{ type:'pie', data:{ labels, datasets:[{ data, backgroundColor:['#3498db','#e74c3c'] }] } });
+        console.log('[DVIR Dashboard] Chart created:', chart);
+        return chart;
     }
     if (chartType === 'line' && startIdx !== -1) {
         const counts={};
@@ -526,8 +572,10 @@ function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
         const labels=Object.keys(counts).sort();
         const preData=labels.map(l=>counts[l]['PRE-TRIP']);
         const postData=labels.map(l=>counts[l]['POST-TRIP']);
-        new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } } });
-        return;
+        console.log('[DVIR Dashboard] Creating line chart with data:', counts);
+        const chart = new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+        console.log('[DVIR Dashboard] Chart created:', chart);
+        return chart;
     }
     const counts={};
     rows.forEach(r=>{ const d=r[driverIdx]; const t=(r[typeIdx]||'').toUpperCase().includes('PRE')?'PRE-TRIP':'POST-TRIP'; if(!counts[d]) counts[d]={ 'PRE-TRIP':0,'POST-TRIP':0 }; counts[d][t]+=1; });
@@ -535,7 +583,10 @@ function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
     const labels=sorted.map(([d])=>d);
     const preData=sorted.map(([ ,v])=>v['PRE-TRIP']);
     const postData=sorted.map(([ ,v])=>v['POST-TRIP']);
-    new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,backgroundColor:'#3498db'},{label:'POST-TRIP',data:postData,backgroundColor:'#e74c3c'}] }, options:{ scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } } });
+    console.log('[DVIR Dashboard] Creating bar chart with data:', counts);
+    const chart = new Chart(ctx,{ type:'bar', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,backgroundColor:'#3498db'},{label:'POST-TRIP',data:postData,backgroundColor:'#e74c3c'}] }, options:{ scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } } });
+    console.log('[DVIR Dashboard] Chart created:', chart);
+    return chart;
 }
 
 // Driver Safety Report Charts
@@ -790,31 +841,44 @@ function drawDriverSafetyCharts(name, rows, cols, chartType) {
 }
 
 function drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType) {
+    console.log(`[Driver Safety Dashboard] Starting with ${rows.length} rows`);
     const normalize = s => s.toLowerCase().replace(/[^a-z\s]/g,'').replace(/\s+/g,'_').trim();
     const driverIdx = cols.findIndex(c => { const n = normalize(c); return n==='driver_name' || n.includes('driver_name') || (n.includes('driver') && !n.includes('driver_id')); });
     const scoreIdx = cols.findIndex(c => normalize(c)==='safety_score' || normalize(c).includes('safety_score'));
     const distanceIdx = cols.findIndex(c => { const n=normalize(c); return n.includes('total_distance') || n==='total_distance_mi'; });
+    console.log(`[Driver Safety Dashboard] driverIdx=${driverIdx}, scoreIdx=${scoreIdx}, distanceIdx=${distanceIdx}`);
     if (chartType === 'bar') {
         const driverScores=[];
         rows.forEach(row=>{ const driver=row[driverIdx]; const score=scoreIdx!==-1?parseFloat(row[scoreIdx]):null; const driveTimeStr=row[cols.findIndex(c=>normalize(c).includes('drive_time'))]; if(driver && score!==null && !isNaN(score)){ let driveHours=0; if(driveTimeStr){ driveHours=parseTimeToHours(driveTimeStr); } driverScores.push({driver,score,driveHours}); }});
         if(driverScores.length===0){ return; }
         const sorted=driverScores.sort((a,b)=>b.score-a.score).slice(0,10);
         const colors=sorted.map(d=>d.score>=95?'#4CAF50':d.score>=90?'#8BC34A':d.score>=80?'#FFC107':d.score>=70?'#FF9800':'#F44336');
-        new Chart(ctx,{ type:'bar', data:{ labels:sorted.map(d=>d.driver), datasets:[{ label:'Safety Score', data:sorted.map(d=>d.score), backgroundColor:colors }] }, options:{ indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100 } } } });
+        console.log('[Driver Safety Dashboard] Creating bar chart with data:', sorted);
+        const chart = new Chart(ctx,{ type:'bar', data:{ labels:sorted.map(d=>d.driver), datasets:[{ label:'Safety Score', data:sorted.map(d=>d.score), backgroundColor:colors }] }, options:{ indexAxis:'y', scales:{ x:{ beginAtZero:true, max:100 } } } });
+        console.log('[Driver Safety Dashboard] Chart created:', chart);
+        return chart;
     } else if (chartType === 'pie') {
         if (driverIdx === -1 || distanceIdx === -1) return;
         const driverData=[];
         rows.forEach(row=>{ const driver=row[driverIdx]; const distance=parseFloat(row[distanceIdx])||0; if(driver && distance>0){ driverData.push({driver,distance}); }});
         if(!driverData.length) return;
         const top10=driverData.sort((a,b)=>b.distance-a.distance).slice(0,10);
-        new Chart(ctx,{ type:'pie', data:{ labels:top10.map(d=>d.driver), datasets:[{ data:top10.map(d=>d.distance), backgroundColor:['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#FF6B35','#C9CBCF','#4BC0C0','#F7931E'] }] } });
+        console.log('[Driver Safety Dashboard] Creating pie chart with data:', top10);
+        const chart = new Chart(ctx,{ type:'pie', data:{ labels:top10.map(d=>d.driver), datasets:[{ data:top10.map(d=>d.distance), backgroundColor:['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#FF6B35','#C9CBCF','#4BC0C0','#F7931E'] }] }});
+        console.log('[Driver Safety Dashboard] Chart created:', chart);
+        return chart;
     }
 }
 
 function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
+    console.log(`[HOS Dashboard] Starting with ${rows.length} rows`);
     const normalizeName = s => s.toLowerCase().replace(/[^a-z\s]/g,'').replace(/\s+/g,'_').trim();
     const vtIdx = cols.findIndex(c => normalizeName(c) === 'violation_type');
-    if (vtIdx === -1) return;
+    console.log(`[HOS Dashboard] Violation type column index: ${vtIdx}`);
+    if (vtIdx === -1) {
+        console.log('[HOS Dashboard] No violation_type column found');
+        return;
+    }
     const weekIdx = cols.findIndex(c => normalizeName(c) === 'week');
     if(chartType === 'line' && weekIdx !== -1){
         const counts={};
@@ -823,11 +887,17 @@ function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
         const weekLabels=Array.from(weeks).sort();
         const palette=['#3366CC','#DC3912','#FF9900','#109618','#990099','#0099C6','#DD4477','#66AA00','#B82E2E','#316395'];
         const datasets=Object.entries(counts).map(([type,byWeek],i)=>({label:type,data:weekLabels.map(w=>byWeek[w]||0),borderColor:palette[i%palette.length],fill:false}));
-        new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
+        console.log('[HOS Dashboard] Creating line chart with data:', counts);
+        const chart = new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
+        console.log('[HOS Dashboard] Chart created:', chart);
+        return chart;
     }else{
         const counts={};
         rows.forEach(r=>{ const val=r[vtIdx]; if(val!==null && val!==undefined && String(val).trim().toLowerCase()!=='null'){ counts[val]=(counts[val]||0)+1; }});
-        new Chart(ctx,{ type:chartType, data:{ labels:Object.keys(counts), datasets:[{ label:'count', data:Object.values(counts) }] } });
+        console.log(`[HOS Dashboard] Creating ${chartType} chart with data:`, counts);
+        const chart = new Chart(ctx,{ type:chartType, data:{ labels:Object.keys(counts), datasets:[{ label:'count', data:Object.values(counts) }] } });
+        console.log('[HOS Dashboard] Chart created:', chart);
+        return chart;
     }
 }
 
