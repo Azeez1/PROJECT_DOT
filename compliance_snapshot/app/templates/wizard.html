@@ -154,23 +154,14 @@
 
     #dashboard-grid {
         display: grid;
-        grid-template-columns: 1fr; /* mobile */
-        gap: 1.5rem;
-        padding: 1rem 0;
-    }
-    @media(min-width: 600px){
-        #dashboard-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-    @media(min-width: 1024px){
-        #dashboard-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 30px;
+        padding: 20px;
+        background: #f8f9fa;
     }
     #dashboard-grid canvas {
         width: 100%;
-        max-width: 400px;
+        max-width: 500px;
         height: auto;
     }
     
@@ -429,7 +420,16 @@ async function openDashboard(){
   });
 
   const area = document.getElementById('table-area');
-  area.innerHTML = '<div id="dashboard-grid"></div>';
+  area.innerHTML = `
+    <h2 style="margin:0 0 1rem 0;color:#1e3c72">Dashboard</h2>
+    <div id="dashboard-grid" style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        margin-bottom: 40px;
+    "></div>`;
   const grid = document.getElementById('dashboard-grid');
 
   const preview = document.getElementById('preview');
@@ -455,14 +455,26 @@ async function openDashboard(){
       }
     }
     const {columns, rows} = cache[tbl];
+    const container = document.createElement('div');
+    container.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    `;
+
+    const title = document.createElement('h3');
+    title.style.cssText = 'margin: 0 0 15px 0; color: #334155; font-size: 1.1rem;';
+    title.textContent = TABLE_NAMES[tbl] || tbl;
+    container.appendChild(title);
+
     const canvas = document.createElement('canvas');
     canvas.id = 'preview';
-    canvas.width = 400;
-    canvas.height = 250;
-    canvas.style.width = '100%';
-    canvas.style.maxWidth = '400px';
-    canvas.style.height = 'auto';
-    grid.appendChild(canvas);
+    canvas.width = 500;
+    canvas.height = 300;
+    canvas.style.cssText = 'width: 100%; height: auto; max-width: 500px;';
+    container.appendChild(canvas);
+    grid.appendChild(container);
 
     const chartType = {'safety_inbox':'pie','mistdvi':'pie'}[tbl] || 'bar';
     typeSel.value = chartType;
