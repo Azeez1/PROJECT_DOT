@@ -562,83 +562,56 @@ async function openDashboard() {
 
     for (const type of reportTypes) {
       const container = document.querySelector(`#chart-${type}`);
-            if (!container) continue;
+      if (!container) continue;
 
-            // Destroy existing chart if it exists
-            if (window.dashboardCharts && window.dashboardCharts[type]) {
-                window.dashboardCharts[type].destroy();
-                delete window.dashboardCharts[type];
-            }
+      const existingChartKey = `dashboard-chart-${type}`;
+      if (window.dashboardCharts && window.dashboardCharts[existingChartKey]) {
+        window.dashboardCharts[existingChartKey].destroy();
+        delete window.dashboardCharts[existingChartKey];
+      }
 
-            // Clear the container first
-            container.innerHTML = '';
+      container.innerHTML = '';
 
-            // Create canvas with explicit size and unique ID
-            const canvas = document.createElement('canvas');
-            canvas.id = `dashboard-chart-${type}`;
-            canvas.width = 400;  // Set explicit width
-            canvas.height = 250; // Set explicit height
-            canvas.style.width = '100%';
-            canvas.style.height = '250px';
-            container.appendChild(canvas);
+      const canvas = document.createElement('canvas');
+      canvas.id = `dashboard-chart-${type}-${Date.now()}`;
+      canvas.width = 400;
+      canvas.height = 250;
+      canvas.style.width = '100%';
+      canvas.style.height = '250px';
+      canvas.style.maxWidth = '400px';
+      canvas.style.maxHeight = '250px';
+      container.appendChild(canvas);
 
-            // Get context
-            const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d');
 
-            // Fetch data for this specific table type
-            try {
-                console.log(`Fetching data for ${type}...`);
-                const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
-                if (!res.ok) throw new Error(`Failed to fetch data for ${type}`);
-                const {columns, rows} = await res.json();
-                console.log(`Fetched ${rows.length} rows for ${type}`);
+      try {
+        console.log(`Fetching data for ${type}...`);
+        const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
+        if (!res.ok) throw new Error(`Failed to fetch data for ${type}`);
+        const {columns, rows} = await res.json();
+        console.log(`Fetched ${rows.length} rows for ${type}`);
 
-                // Draw chart immediately (no setTimeout)
-                const draw = chartMap[type];
-                if (draw) {
-                    try {
-                        console.log(`Attempting to draw ${type} chart...`);
+        const draw = chartMap[type];
+        if (draw && typeof draw === 'function') {
+          console.log(`Drawing ${type} chart...`);
+          const chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
 
-                        // Call the draw function and capture result
-                        let chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
-
-                        // If no chart returned, create a fallback chart
-                        if (!chartInstance) {
-                            console.log(`No chart returned for ${type}, creating fallback...`);
-                            chartInstance = new Chart(ctx, {
-                                type: 'bar',
-                                data: {
-                                    labels: ['No Data'],
-                                    datasets: [{
-                                        label: type,
-                                        data: [1],
-                                        backgroundColor: '#ff6384'
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false
-                                }
-                            });
-                        }
-
-                        console.log(`${type} chart created:`, !!chartInstance);
-
-                        // Store the chart
-                        if (!window.dashboardCharts) window.dashboardCharts = {};
-                        window.dashboardCharts[type] = chartInstance;
-
-                    } catch (error) {
-                        console.error(`Error creating ${type} chart:`, error);
-                    }
-                } else {
-                    console.warn(`No chart function found for ${type}`);
-                }
-            } catch (error) {
-                console.error(`Error fetching data for ${type}:`, error);
-                // Create error placeholder
-                container.innerHTML = '<div class="chart-placeholder">Error loading data</div>';
-            }
+          if (chartInstance && chartInstance.constructor && chartInstance.constructor.name === 'Chart') {
+            if (!window.dashboardCharts) window.dashboardCharts = {};
+            window.dashboardCharts[existingChartKey] = chartInstance;
+            console.log(`${type} chart created successfully`);
+          } else {
+            console.error(`${type} chart function did not return a valid Chart instance`);
+            container.innerHTML = '<div class="chart-placeholder">Chart function error</div>';
+          }
+        } else {
+          console.warn(`No chart function found for ${type}`);
+          container.innerHTML = '<div class="chart-placeholder">No chart function available</div>';
+        }
+      } catch (error) {
+        console.error(`Error creating ${type} chart:`, error);
+        container.innerHTML = '<div class="chart-placeholder">Error loading data</div>';
+      }
     }
 
   } catch (error) {

@@ -567,9 +567,7 @@ function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
         const preData=labels.map(l=>counts[l]['PRE-TRIP']);
         const postData=labels.map(l=>counts[l]['POST-TRIP']);
         console.log('[DVIR Dashboard] Creating line chart with data:', counts);
-        const chart = new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } }} });
-        console.log('[DVIR Dashboard] Chart created:', chart);
-        return chart;
+        return new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } }} );
     }
     const counts={};
     rows.forEach(r=>{ const d=r[driverIdx]; const t=(r[typeIdx]||'').toUpperCase().includes('PRE')?'PRE-TRIP':'POST-TRIP'; if(!counts[d]){ counts[d]={ 'PRE-TRIP':0,'POST-TRIP':0 }; counts[d][t]+=1; });
@@ -881,16 +879,14 @@ function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
         const datasets=Object.entries(counts).map(([type,byWeek],i)=>({label:type,data:weekLabels.map(w=>byWeek[w]||0),borderColor:palette[i%palette.length],fill:false}));
         console.log('[HOS Dashboard] Creating line chart with data:', counts);
         console.log('[HOS Dashboard] Chart created');
-        const chart = new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
-        return chart;
+        return new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
     }else{
         const counts={};
         rows.forEach(r=>{ const val=r[vtIdx]; if(val!==null && val!==undefined && String(val).trim().toLowerCase()!=='null'){ counts[val]=(counts[val]||0)+1; }});
         const violationCounts = counts;
         console.log('[HOS Dashboard] Creating bar chart with data:', violationCounts);
-        const chart = new Chart(ctx,{ type:'bar', data:{ labels:Object.keys(violationCounts), datasets:[{ label:'Violations', data:Object.values(violationCounts), backgroundColor:['#FF6B35','#F7931E','#00D9FF','#39FF14','#FF0000'] }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
-        console.log('[HOS Dashboard] Chart created:', chart);
-        return chart;
+        console.log('[HOS Dashboard] Chart created');
+        return new Chart(ctx,{ type:'bar', data:{ labels:Object.keys(violationCounts), datasets:[{ label:'Violations', data:Object.values(violationCounts), backgroundColor:['#FF6B35','#F7931E','#00D9FF','#39FF14','#FF0000'] }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
     }
 }
 
