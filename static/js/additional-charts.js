@@ -72,7 +72,7 @@ function drawPCCharts(name, rows, cols, chartType) {
             data: { labels, datasets: [{ data, backgroundColor: colors }] },
             options: { plugins: { title: { display: true, text: name } } }
         });
-        return;
+        return window.currentChart;
     }
 
     const top = sorted.slice(0,15);
@@ -87,6 +87,7 @@ function drawPCCharts(name, rows, cols, chartType) {
             scales: { y: { beginAtZero: true } }
         }
     });
+    return window.currentChart;
 }
 
 function drawPCChartForDashboard(ctx, rows, cols, chartType) {
@@ -164,7 +165,7 @@ function drawSafetyCharts(name, rows, cols, chartType) {
                 scales: { x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } }
             }
         });
-        return;
+        return window.currentChart;
     }
 
     const regions = ['Great Lakes','Ohio Valley','Southeast','Midwest','Corporate','Gulf Coast'];
@@ -188,6 +189,7 @@ function drawSafetyCharts(name, rows, cols, chartType) {
         data: { labels, datasets: [{ data, backgroundColor: colors }] },
         options: { plugins: { title: { display: true, text: name } } }
     });
+    return window.currentChart;
 }
 
 function drawSafetyChartForDashboard(ctx, rows, cols, chartType) {
@@ -276,7 +278,7 @@ function drawUnassignedCharts(name, rows, cols, chartType) {
             data: { labels, datasets: [{ data, backgroundColor: colors }] },
             options: { plugins: { title: { display: true, text: name } } }
         });
-        return;
+        return window.currentChart;
     }
 
     const totals = {};
@@ -297,6 +299,7 @@ function drawUnassignedCharts(name, rows, cols, chartType) {
             scales: { y: { beginAtZero: true } }
         }
     });
+    return window.currentChart;
 }
 
 function drawUnassignedChartForDashboard(ctx, rows, cols, chartType) {
@@ -377,7 +380,7 @@ function drawDriverBehaviorsCharts(name, rows, cols, chartType) {
             data:{ labels, datasets:[{ data, backgroundColor: colors }] },
             options:{ plugins:{ title:{ display:true, text:name } } }
         });
-        return;
+        return window.currentChart;
     }
 
     if (tagsIdx !== -1) {
@@ -400,7 +403,7 @@ function drawDriverBehaviorsCharts(name, rows, cols, chartType) {
                 data:{ labels, datasets:[{ label:'Safety Score', data, backgroundColor: colors }] },
                 options:{ plugins:{ title:{ display:true, text:name } }, scales:{ y:{ beginAtZero:true, max:100 } } }
             });
-            return;
+            return window.currentChart;
         }
     }
 
@@ -493,7 +496,7 @@ function drawMissedDVIRCharts(name, rows, cols, chartType) {
             data:{ labels, datasets:[{ data, backgroundColor:['#3498db','#e74c3c'] }] },
             options:{ plugins:{ title:{ display:true, text:name } } }
         });
-        return;
+        return window.currentChart;
     }
 
     if (chartType === 'line' && startIdx !== -1) {
@@ -514,7 +517,7 @@ function drawMissedDVIRCharts(name, rows, cols, chartType) {
             data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] },
             options:{ plugins:{ title:{ display:true, text:name } }, scales:{ y:{ beginAtZero:true } } }
         });
-        return;
+        return window.currentChart;
     }
 
     const counts = {};
@@ -534,6 +537,7 @@ function drawMissedDVIRCharts(name, rows, cols, chartType) {
         data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,backgroundColor:'#3498db'},{label:'POST-TRIP',data:postData,backgroundColor:'#e74c3c'}] },
         options:{ plugins:{ title:{ display:true, text:name } }, scales:{ x:{ stacked:true }, y:{ stacked:true, beginAtZero:true } } }
     });
+    return window.currentChart;
 }
 
 function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
@@ -699,7 +703,7 @@ function drawDriverSafetyCharts(name, rows, cols, chartType) {
                         }
                     }
                 });
-                return;
+                return window.currentChart;
             }
         }
 
@@ -759,6 +763,7 @@ function drawDriverSafetyCharts(name, rows, cols, chartType) {
                 }
             }
         });
+        return window.currentChart;
     } else if (chartType === 'pie') {
         // Pie Chart: Top 10 drivers by distance
         if (driverIdx === -1 || distanceIdx === -1) {
