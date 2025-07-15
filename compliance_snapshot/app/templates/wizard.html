@@ -473,6 +473,16 @@ async function openDashboard() {
     drawSafetyChartForDashboard: typeof window.drawSafetyChartForDashboard,
     drawHOSChartForDashboard: typeof window.drawHOSChartForDashboard
   });
+  // Clean up any existing dashboard charts
+  if (window.dashboardCharts) {
+    Object.values(window.dashboardCharts).forEach(chart => {
+      if (chart && typeof chart.destroy === 'function') {
+        chart.destroy();
+      }
+    });
+  }
+  window.dashboardCharts = {};
+
   Chart.defaults.responsive = true;
   Chart.defaults.maintainAspectRatio = false;
   Chart.defaults.plugins.legend.display = false;
@@ -553,6 +563,12 @@ async function openDashboard() {
     for (const type of reportTypes) {
       const container = document.querySelector(`#chart-${type}`);
             if (!container) continue;
+
+            // Destroy existing chart if it exists
+            if (window.dashboardCharts && window.dashboardCharts[type]) {
+                window.dashboardCharts[type].destroy();
+                delete window.dashboardCharts[type];
+            }
 
             // Clear the container first
             container.innerHTML = '';
@@ -854,6 +870,7 @@ function drawChart(name, rows, cols){
     return;
   }else if(tableName === 'driver_behaviors'){
     if(window.drawDriverBehaviorsCharts){
+```python
       window.drawDriverBehaviorsCharts(name, rows, cols, chartType);
       return;
     }
