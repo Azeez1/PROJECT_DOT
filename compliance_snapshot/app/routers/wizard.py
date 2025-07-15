@@ -24,6 +24,8 @@ def _summary(ticket: str) -> Path:
 
 def _err(ticket: str) -> Path:
     return Path(f"/tmp/{ticket}/errors.json")
+
+
 @router.get("/wizard/{ticket}", response_class=HTMLResponse)
 async def wizard(request: Request, ticket: str):
     if not _db(ticket).exists():
@@ -52,6 +54,7 @@ async def list_errors(ticket: str):
         data = []
     return data
 
+
 @router.get("/api/{ticket}/tables")
 async def list_tables(ticket: str):
     try:
@@ -60,6 +63,7 @@ async def list_tables(ticket: str):
         return [r[0] for r in cur.fetchall()]
     except Exception as exc:
         raise HTTPException(500, f"database error: {exc}")
+
 
 @router.get("/api/{ticket}/query")
 async def query_table(ticket: str, table: str, limit: int | None = None):
@@ -75,7 +79,7 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
         cols = [c[1] for c in con.execute(f'PRAGMA table_info("{table}")')]
         query = f'SELECT * FROM "{table}"'
         if limit is not None:
-            query += f' LIMIT {int(limit)}'
+            query += f" LIMIT {int(limit)}"
         rows = con.execute(query).fetchall()
         return JSONResponse({"columns": cols, "rows": rows})
     except Exception as exc:
@@ -84,7 +88,11 @@ async def query_table(ticket: str, table: str, limit: int | None = None):
 
 @router.post("/finalize/{wiz_id}")
 async def finalize(wiz_id: str, request: Request):
-    """Generate and immediately return the PDF snapshot."""
+    """Generate and return the PDF snapshot.
+
+    If ``include_word`` is truthy in the request payload, a Word document is
+    generated alongside the PDF and both files are returned as a ZIP archive.
+    """
 
     db_file = _db(wiz_id)
     if not db_file.exists():
@@ -93,8 +101,25 @@ async def finalize(wiz_id: str, request: Request):
     payload = await request.json()
     filters = payload.get("filters") or {}
     trend_end = payload.get("trend_end")
+    include_word = bool(payload.get("include_word"))
 
     pdf_path = build_pdf(wiz_id, filters=filters, trend_end=trend_end)
+
+    if include_word:
+        from ..services.word_builder import build_word
+        import zipfile
+
+        word_path = build_word(wiz_id, filters=filters, trend_end=trend_end)
+        zip_path = Path(f"/tmp/{wiz_id}/snapshot.zip")
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.write(pdf_path, arcname="DOT_Compliance_Snapshot.pdf")
+            zf.write(word_path, arcname="DOT_Compliance_Snapshot.docx")
+        return file_response(
+            zip_path,
+            filename="DOT_Compliance_Snapshot.zip",
+            media_type="application/zip",
+        )
+
     return file_response(
         pdf_path,
         filename=f"DOT_Compliance_{wiz_id[:8]}.pdf",
