@@ -567,7 +567,7 @@ function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
         const preData=labels.map(l=>counts[l]['PRE-TRIP']);
         const postData=labels.map(l=>counts[l]['POST-TRIP']);
         console.log('[DVIR Dashboard] Creating line chart with data:', counts);
-        const chart = new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+        const chart = new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } }} });
         console.log('[DVIR Dashboard] Chart created:', chart);
         return chart;
     }
@@ -862,7 +862,7 @@ function drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType) {
     }
 }
 
-function drawHOSChartForDashboard(name, rows, cols, chartType) {
+function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
     console.log('[HOS Dashboard] Function called with:', rows.length, 'rows');
     const normalizeName = s => s.toLowerCase().replace(/[^a-z\s]/g,'').replace(/\s+/g,'_').trim();
     const vtIdx = cols.findIndex(c => normalizeName(c) === 'violation_type');

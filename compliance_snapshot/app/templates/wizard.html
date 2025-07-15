@@ -573,8 +573,9 @@ async function openDashboard() {
             // Clear the container first
             container.innerHTML = '';
 
-            // Create canvas with explicit size
+            // Create canvas with explicit size and unique ID
             const canvas = document.createElement('canvas');
+            canvas.id = `dashboard-chart-${type}`;
             canvas.width = 400;  // Set explicit width
             canvas.height = 250; // Set explicit height
             canvas.style.width = '100%';
