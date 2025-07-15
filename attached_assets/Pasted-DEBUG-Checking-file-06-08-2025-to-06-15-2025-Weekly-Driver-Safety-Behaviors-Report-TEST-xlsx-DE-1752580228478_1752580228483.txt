@@ -1,0 +1,158 @@
+DEBUG: Checking file 06-08-2025 to 06-15-2025 -- Weekly Driver Safety Behaviors Report_TEST.xlsx
+DEBUG: First 5 columns: ['Driver Name', 'Safety Score Rank', 'Safety Score', 'Harsh Turn Count', 'Heavy Speeding Time (hh:mm:ss)']
+[INFO] Saved 06-08-2025 to 06-15-2025 -- Weekly Driver Safety Behaviors Report_TEST.xlsx as 'driver_behaviors' table
+DEBUG: Checking file 06-08-2025 to 06-15-2025 -- Weekly Missed DVIR Report_TEST.xlsx
+DEBUG: First 5 columns: ['Vehicle', 'Driver', 'Start Time', 'End Time', 'Type']
+DEBUG: File 06-08-2025 to 06-15-2025 -- Weekly Missed DVIR Report_TEST.xlsx detected as: mistdvi
+[INFO] Saved 06-08-2025 to 06-15-2025 -- Weekly Missed DVIR Report_TEST.xlsx as 'mistdvi' table
+DEBUG: Checking file 06-08-2025 to 06-15-2025 Driver Safety Report_TEST.xlsx
+DEBUG: First 5 columns: ['Rank', 'Driver Name', 'Driver Tags', 'Tag Paths', 'Driver ID']
+[INFO] Saved 06-08-2025 to 06-15-2025 Driver Safety Report_TEST.xlsx as 'driver_safety' table
+DEBUG: Checking file HOS VIOLATIONS - Master Report_TEST.xlsx
+DEBUG: First 5 columns: ['Driver', 'Violation Type', 'Date', 'WEEK OF…', 'Violation Start']
+DEBUG: File HOS VIOLATIONS - Master Report_TEST.xlsx detected as: hos
+[INFO] Saved HOS VIOLATIONS - Master Report_TEST.xlsx as 'hos' table
+DEBUG: Checking file PC Excessive Use - Master Report_Test .xlsx
+DEBUG: First 5 columns: ['Date', 'Driver Name', 'ELD Exempt', 'ELD Exempt Reason', 'Personal Conveyance (Duration)']
+DEBUG: File PC Excessive Use - Master Report_Test .xlsx detected as: personnel_conveyance
+[INFO] Saved PC Excessive Use - Master Report_Test .xlsx as 'personnel_conveyance' table
+DEBUG: Checking file Safety Inbox Daily Report -- Master Report_TEST.xlsx
+DEBUG: First 5 columns: ['Time', 'Vehicle', 'Driver', 'Driver Tags', 'Event Type']
+DEBUG: File Safety Inbox Daily Report -- Master Report_TEST.xlsx detected as: safety_inbox
+[INFO] Saved Safety Inbox Daily Report -- Master Report_TEST.xlsx as 'safety_inbox' table
+DEBUG: Checking file UNASSIGNED HOS DAILY - MASTER REPORT_TEST.xlsx
+DEBUG: First 5 columns: ['DATE', 'Vehicle', 'Unassigned Time', 'Unassigned Distance', 'Unassigned Segments']
+DEBUG: File UNASSIGNED HOS DAILY - MASTER REPORT_TEST.xlsx detected as: unassigned_hos
+[INFO] Saved UNASSIGNED HOS DAILY - MASTER REPORT_TEST.xlsx as 'unassigned_hos' table
+[INFO] Upload summary: {'uploaded': 7, 'processed': 7, 'failed': {}}
+INFO:     10.81.4.179:0 - "POST /generate HTTP/1.1" 303 See Other
+INFO:     10.81.4.179:0 - "GET /wizard/95674f299e024d83bf538dbec39a8b17 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 401, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 756, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 776, in app
+    await route.handle(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/fastapi/routing.py", line 278, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/compliance_snapshot/app/routers/wizard.py", line 40, in wizard
+    return templates.TemplateResponse(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/templating.py", line 229, in TemplateResponse
+    template = self.get_template(name)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/templating.py", line 143, in get_template
+    return self.env.get_template(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/loaders.py", line 209, in get_source
+    raise TemplateNotFound(
+jinja2.exceptions.TemplateNotFound: 'wizard.html' not found in search path: 'app/templates'
+INFO:     10.81.4.179:0 - "GET /wizard/95674f299e024d83bf538dbec39a8b17 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 401, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/applications.py", line 123, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 756, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 776, in app
+    await route.handle(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 297, in handle
+    await self.app(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 77, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
+    raise exc
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/routing.py", line 72, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/fastapi/routing.py", line 278, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/compliance_snapshot/app/routers/wizard.py", line 40, in wizard
+    return templates.TemplateResponse(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/templating.py", line 229, in TemplateResponse
+    template = self.get_template(name)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/starlette/templating.py", line 143, in get_template
+    return self.env.get_template(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.12/site-packages/jinja2/loaders.py", line 209, in get_source
+    raise TemplateNotFound(
+jinja2.exceptions.TemplateNotFound: 'wizard.html' not found in search path: 'app/templates'
