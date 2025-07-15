@@ -468,6 +468,9 @@ async function loadErrors(){
 async function openDashboard() {
   console.log('=== DASHBOARD OPENED ===');
   console.log('Chart.js loaded?', typeof Chart !== 'undefined');
+  Chart.defaults.responsive = true;
+  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.plugins.legend.display = false;
   document.getElementById('table-area').style.display = 'none';
   document.getElementById('dashboard-area').style.display = 'block';
   document.getElementById('finalize-form').style.display = 'none';
@@ -544,21 +547,19 @@ async function openDashboard() {
 
       // Let the browser calculate dimensions
       setTimeout(() => {
-          // Force canvas to have proper dimensions
-          canvas.width = container.offsetWidth || 350;
-          canvas.height = 250;
-
           const ctx = canvas.getContext('2d');
-
           const draw = chartMap[type];
           try {
             if (draw) {
-              console.log(`Drawing ${type} with canvas size: ${canvas.width}x${canvas.height}`);
+              console.log(`Drawing ${type}...`);
               const chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
               console.log(`${type} chart instance:`, chartInstance);
-              if (!chartInstance) {
-                console.error(`No chart instance returned for ${type}`);
+              if (chartInstance && chartInstance.canvas) {
+                chartInstance.resize(350, 250);
+                console.log(`Resized ${type} chart to 350x250`);
               }
+              if (!window.dashboardCharts) window.dashboardCharts = {};
+              window.dashboardCharts[type] = chartInstance;
             }
           } catch (error) {
             console.error(`Error drawing ${type} chart:`, error);
