@@ -548,19 +548,34 @@ async function openDashboard() {
           canvas.width = container.offsetWidth || 350;
           canvas.height = 250;
 
-          // Get fresh context after setting dimensions
           const ctx = canvas.getContext('2d');
 
           const draw = chartMap[type];
           try {
             if (draw) {
               console.log(`Drawing ${type} with canvas size: ${canvas.width}x${canvas.height}`);
-              draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+              const chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+              console.log(`${type} chart instance:`, chartInstance);
+              if (!chartInstance) {
+                console.error(`No chart instance returned for ${type}`);
+              }
             }
           } catch (error) {
             console.error(`Error drawing ${type} chart:`, error);
           }
       }, 100);
+
+      setTimeout(() => {
+          const checkCanvas = document.querySelector(`#chart-${type} canvas`);
+          console.log(`Canvas visibility check for ${type}:`, {
+              element: checkCanvas,
+              width: checkCanvas?.width,
+              height: checkCanvas?.height,
+              style: checkCanvas?.style.cssText,
+              parent: checkCanvas?.parentElement,
+              isVisible: checkCanvas?.offsetWidth > 0 && checkCanvas?.offsetHeight > 0
+          });
+      }, 200);
     }
 
   } catch (error) {
