@@ -464,6 +464,8 @@ async function loadErrors(){
 
 // ---------- open dashboard ----------
 async function openDashboard() {
+  console.log('=== DASHBOARD OPENED ===');
+  console.log('Chart.js loaded?', typeof Chart !== 'undefined');
   document.getElementById('table-area').style.display = 'none';
   document.getElementById('dashboard-area').style.display = 'block';
   document.getElementById('finalize-form').style.display = 'none';
@@ -478,6 +480,7 @@ async function openDashboard() {
   try {
     const tblRes = await fetch(`/api/${ticket}/tables`);
     const allTables = await tblRes.json();
+    console.log('All tables available:', allTables);
 
     const chartMap = {
       personnel_conveyance: drawPCChartForDashboard,
@@ -495,6 +498,7 @@ async function openDashboard() {
       'hos', 'safety_inbox', 'personnel_conveyance',
       'unassigned_hos', 'mistdvi', 'driver_behaviors', 'driver_safety'
     ].filter(t => allTables.includes(t));
+    console.log('Report types to display:', reportTypes);
 
     dashboardGrid.innerHTML = '';
     const chartTypeDefaults = {
@@ -517,6 +521,7 @@ async function openDashboard() {
           <div class="chart-body" id="chart-${type}"></div>
       `;
       dashboardGrid.appendChild(card);
+      console.log(`Creating card for: ${type}`);
     }
 
     for (const type of reportTypes) {
@@ -525,13 +530,29 @@ async function openDashboard() {
       const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
       if (!res.ok) continue;
       const { columns, rows } = await res.json();
+      console.log(`API response for ${type}:`, res.ok, `Rows: ${rows.length}, Cols: ${columns.length}`);
       container.innerHTML = '';
       const canvas = document.createElement('canvas');
       canvas.style.maxHeight = '250px';
       container.appendChild(canvas);
       const ctx = canvas.getContext('2d');
       const draw = chartMap[type];
-      if (draw) draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+      console.log(`Attempting to draw ${type} chart`);
+      console.log(`Container found:`, container);
+      console.log(`Canvas created:`, canvas);
+      console.log(`Canvas dimensions:`, canvas.width, 'x', canvas.height);
+      console.log(`Context obtained:`, !!ctx);
+      try {
+        if (draw) {
+          console.log(`Calling draw function for ${type}`);
+          draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+          console.log(`Successfully drew ${type} chart`);
+        } else {
+          console.log(`No draw function found for ${type}`);
+        }
+      } catch (error) {
+        console.error(`ERROR drawing ${type} chart:`, error);
+      }
     }
 
   } catch (error) {
