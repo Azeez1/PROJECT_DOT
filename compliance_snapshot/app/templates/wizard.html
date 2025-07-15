@@ -154,12 +154,24 @@
 
     #dashboard-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr; /* mobile */
         gap: 1.5rem;
+        padding: 1rem 0;
+    }
+    @media(min-width: 600px){
+        #dashboard-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media(min-width: 1024px){
+        #dashboard-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
     #dashboard-grid canvas {
         width: 100%;
-        height: 300px;
+        max-width: 400px;
+        height: auto;
     }
     
     #build-pdf {
@@ -445,6 +457,11 @@ async function openDashboard(){
     const {columns, rows} = cache[tbl];
     const canvas = document.createElement('canvas');
     canvas.id = 'preview';
+    canvas.width = 400;
+    canvas.height = 250;
+    canvas.style.width = '100%';
+    canvas.style.maxWidth = '400px';
+    canvas.style.height = 'auto';
     grid.appendChild(canvas);
 
     const chartType = {'safety_inbox':'pie','mistdvi':'pie'}[tbl] || 'bar';
