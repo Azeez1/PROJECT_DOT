@@ -479,9 +479,35 @@ async function openDashboard(){
     const chartType = {'safety_inbox':'pie','mistdvi':'pie'}[tbl] || 'bar';
     typeSel.value = chartType;
     window.tableName = tbl;
-    drawChart(TABLE_NAMES[tbl] || tbl.replace(/_/g,' '), rows, columns);
+    drawChart(TABLE_NAMES[tbl] || tbl.replace(/_/g,' '), rows, columns, chartType);
     window.dashboardCharts.push(window.currentChart);
     canvas.id = `${tbl}-chart`;
+    window.currentChart = null;
+
+    // ----- alternate chart -----
+    const altCanvas = document.createElement('canvas');
+    altCanvas.width = 500;
+    altCanvas.height = 300;
+    altCanvas.style.cssText = 'width: 100%; height: auto; max-width: 500px;';
+
+    const altContainer = document.createElement('div');
+    altContainer.style.cssText = container.style.cssText;
+
+    const altChartType = chartType === 'bar' ? 'pie' : 'bar';
+    const altTitleText = `${TABLE_NAMES[tbl]} (${altChartType.charAt(0).toUpperCase() + altChartType.slice(1)} Chart)`;
+    const altTitle = document.createElement('h3');
+    altTitle.style.cssText = title.style.cssText;
+    altTitle.textContent = altTitleText;
+    altContainer.appendChild(altTitle);
+    altContainer.appendChild(altCanvas);
+    grid.appendChild(altContainer);
+
+    altCanvas.id = 'preview';
+    typeSel.value = altChartType;
+    window.tableName = tbl;
+    drawChart(altTitleText, rows, columns, altChartType);
+    window.dashboardCharts.push(window.currentChart);
+    altCanvas.id = `${tbl}-chart-alt`;
     window.currentChart = null;
   }
 
@@ -688,13 +714,13 @@ async function openTab(table){
 
 }
 
-function drawChart(name, rows, cols){
+function drawChart(name, rows, cols, forcedType=null){
   const canvas = document.getElementById('preview');
   if(!rows.length){ canvas.classList.add('hidden'); return; }
 
   const tableName = window.tableName;
   console.log('Current table name:', tableName);
-  const chartType = document.getElementById("chart-type").value;
+  const chartType = forcedType || document.getElementById("chart-type").value;
   if(tableName === "personnel_conveyance"){
     window.drawPCCharts(name, rows, cols, chartType);
     return;
@@ -733,7 +759,7 @@ function drawChart(name, rows, cols){
 
 
   const ctx = canvas.getContext('2d');
-  const chosen = document.getElementById('chart-type').value;
+  const chosen = forcedType || document.getElementById('chart-type').value;
   document.getElementById('chart-type-hidden').value = chosen;
 
   if(window.currentChart){ window.currentChart.destroy(); }
