@@ -476,80 +476,62 @@ async function openDashboard() {
   dashboardGrid.innerHTML = '<div class="loading-message">Loading dashboard...</div>';
 
   try {
-    const response = await fetch(`/api/${ticket}/dashboard-data`);
-    const dashboardData = await response.json();
+    const tblRes = await fetch(`/api/${ticket}/tables`);
+    const allTables = await tblRes.json();
 
-    dashboardGrid.innerHTML = '';
+    const chartMap = {
+      personnel_conveyance: drawPCChartForDashboard,
+      safety_inbox: drawSafetyChartForDashboard,
+      unassigned_hos: drawUnassignedChartForDashboard,
+      driver_behaviors: drawDriverBehaviorsChartForDashboard,
+      mistdvi: drawMissedDVIRChartForDashboard,
+      driver_safety: drawDriverSafetyChartForDashboard,
+      drivers_safety: drawDriverSafetyChartForDashboard,
+      driver_safety_report: drawDriverSafetyChartForDashboard,
+      hos: drawHOSChartForDashboard
+    };
 
-    const chartContainers = {};
     const reportTypes = [
       'hos', 'safety_inbox', 'personnel_conveyance',
       'unassigned_hos', 'mistdvi', 'driver_behaviors', 'driver_safety'
-    ];
+    ].filter(t => allTables.includes(t));
 
-    reportTypes.forEach(reportType => {
+    dashboardGrid.innerHTML = '';
+    const chartTypeDefaults = {
+      hos: 'bar',
+      safety_inbox: 'pie',
+      personnel_conveyance: 'bar',
+      unassigned_hos: 'bar',
+      mistdvi: 'pie',
+      driver_behaviors: 'bar',
+      driver_safety: 'bar'
+    };
+
+    for (const type of reportTypes) {
       const card = document.createElement('div');
       card.className = 'chart-card';
       card.innerHTML = `
           <div class="chart-header">
-              <h3>${TABLE_NAMES[reportType] || reportType}</h3>
+              <h3>${TABLE_NAMES[type] || type}</h3>
           </div>
-          <div class="chart-body" id="chart-${reportType}">
-              <div class="chart-placeholder">No data available</div>
-          </div>
+          <div class="chart-body" id="chart-${type}"></div>
       `;
       dashboardGrid.appendChild(card);
-      chartContainers[reportType] = card.querySelector(`#chart-${reportType}`);
-    });
+    }
 
-    for (const [table, chartConfig] of Object.entries(dashboardData)) {
-      const container = chartContainers[table];
+    for (const type of reportTypes) {
+      const container = document.querySelector(`#chart-${type}`);
       if (!container) continue;
-
+      const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
+      if (!res.ok) continue;
+      const { columns, rows } = await res.json();
       container.innerHTML = '';
       const canvas = document.createElement('canvas');
       canvas.style.maxHeight = '250px';
       container.appendChild(canvas);
-
       const ctx = canvas.getContext('2d');
-
-      if (chartConfig.type === 'bar') {
-        new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: Object.keys(chartConfig.data),
-            datasets: [{
-              label: 'Count',
-              data: Object.values(chartConfig.data),
-              backgroundColor: '#2a5298'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { title: { display: true, text: chartConfig.title } }
-          }
-        });
-      } else if (chartConfig.type === 'pie') {
-        new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: Object.keys(chartConfig.data),
-            datasets: [{
-              data: Object.values(chartConfig.data),
-              backgroundColor: [
-                '#FF6384', '#36A2EB', '#FFCE56',
-                '#4BC0C0', '#9966FF', '#FF9F40'
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { title: { display: true, text: chartConfig.title } }
-          }
-        });
-      }
+      const draw = chartMap[type];
+      if (draw) draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
     }
 
   } catch (error) {
