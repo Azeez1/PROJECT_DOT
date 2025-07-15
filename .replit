@@ -16,3 +16,15 @@ run = [
 localPort = 8000
 externalPort = 80
 exposeLocalhost = true
+
+[workflows]
+runButton = "Start Application"
+
+[[workflows.workflow]]
+name = "Start Application"
+author = 38770819
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uvicorn compliance_snapshot.app.main:app --host 0.0.0.0 --port 8000"

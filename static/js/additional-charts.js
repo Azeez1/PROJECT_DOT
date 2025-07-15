@@ -564,10 +564,10 @@ function drawMissedDVIRChartForDashboard(ctx, rows, cols, chartType) {
         const postData=labels.map(l=>counts[l]['POST-TRIP']);
         console.log('[DVIR Dashboard] Creating line chart with data:', counts);
         console.log('[DVIR Dashboard] Chart created');
-        return new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+        return new Chart(ctx,{ type:'line', data:{ labels, datasets:[{label:'PRE-TRIP',data:preData,borderColor:'#3498db',fill:false},{label:'POST-TRIP',data:postData,borderColor:'#e74c3c',fill:false}] }, options:{ scales:{ y:{ beginAtZero:true } } });
     }
     const counts={};
-    rows.forEach(r=>{ const d=r[driverIdx]; const t=(r[typeIdx]||'').toUpperCase().includes('PRE')?'PRE-TRIP':'POST-TRIP'; if(!counts[d]) counts[d]={ 'PRE-TRIP':0,'POST-TRIP':0 }; counts[d][t]+=1; });
+    rows.forEach(r=>{ const d=r[driverIdx]; const t=(r[typeIdx]||'').toUpperCase().includes('PRE')?'PRE-TRIP':'POST-TRIP'; if(!counts[d]){ counts[d]={ 'PRE-TRIP':0,'POST-TRIP':0 }; counts[d][t]+=1; });
     const sorted=Object.entries(counts).sort((a,b)=>(b[1]['PRE-TRIP']+b[1]['POST-TRIP'])-(a[1]['PRE-TRIP']+a[1]['POST-TRIP'])).slice(0,15);
     const labels=sorted.map(([d])=>d);
     const preData=sorted.map(([ ,v])=>v['PRE-TRIP']);
@@ -899,4 +899,3 @@ window.drawDriverBehaviorsChartForDashboard = drawDriverBehaviorsChartForDashboa
 window.drawMissedDVIRChartForDashboard = drawMissedDVIRChartForDashboard;
 window.drawDriverSafetyChartForDashboard = drawDriverSafetyChartForDashboard;
 window.drawHOSChartForDashboard = drawHOSChartForDashboard;
-
