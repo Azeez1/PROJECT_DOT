@@ -1,6 +1,14 @@
 // Additional chart functions for PC Excessive Use, Safety Inbox, Unassigned HOS
 // and new driver-related reports
 
+// Set Chart.js defaults for all charts
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = false;
+    Chart.defaults.plugins.legend.display = false;
+    Chart.defaults.plugins.legend.position = 'bottom';
+}
+
 // Normalize column names helper
 const normalize = s => s.toLowerCase()
     .replace(/[^a-z\s]/g, '')
@@ -862,33 +870,76 @@ function drawDriverSafetyChartForDashboard(ctx, rows, cols, chartType) {
     }
 }
 
-function drawHOSChartForDashboard(name, rows, cols, chartType) {
+function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
     console.log('[HOS Dashboard] Function called with:', rows.length, 'rows');
     const normalizeName = s => s.toLowerCase().replace(/[^a-z\s]/g,'').replace(/\s+/g,'_').trim();
     const vtIdx = cols.findIndex(c => normalizeName(c) === 'violation_type');
     console.log(`[HOS Dashboard] Violation type column index: ${vtIdx}`);
     if (vtIdx === -1) {
         console.log('[HOS Dashboard] No violation_type column found');
-        return;
+        return null;
     }
+
     const weekIdx = cols.findIndex(c => normalizeName(c) === 'week');
+
     if(chartType === 'line' && weekIdx !== -1){
         const counts={};
         const weeks=new Set();
-        rows.forEach(r=>{ const vt=r[vtIdx]; const wk=r[weekIdx]; if(vt && wk){ counts[vt]=counts[vt]||{}; counts[vt][wk]=(counts[vt][wk]||0)+1; weeks.add(wk); } });
+        rows.forEach(r=>{ 
+            const vt=r[vtIdx]; 
+            const wk=r[weekIdx]; 
+            if(vt && wk){ 
+                counts[vt]=counts[vt]||{}; 
+                counts[vt][wk]=(counts[vt][wk]||0)+1; 
+                weeks.add(wk); 
+            } 
+        });
         const weekLabels=Array.from(weeks).sort();
         const palette=['#3366CC','#DC3912','#FF9900','#109618','#990099','#0099C6','#DD4477','#66AA00','#B82E2E','#316395'];
-        const datasets=Object.entries(counts).map(([type,byWeek],i)=>({label:type,data:weekLabels.map(w=>byWeek[w]||0),borderColor:palette[i%palette.length],fill:false}));
+        const datasets=Object.entries(counts).map(([type,byWeek],i)=>({
+            label:type,
+            data:weekLabels.map(w=>byWeek[w]||0),
+            borderColor:palette[i%palette.length],
+            fill:false
+        }));
         console.log('[HOS Dashboard] Creating line chart with data:', counts);
-        console.log('[HOS Dashboard] Chart created');
-        const chart = new Chart(ctx,{type:'line',data:{ labels:weekLabels, datasets }});
+        const chart = new Chart(ctx,{
+            type:'line',
+            data:{ labels:weekLabels, datasets },
+            options:{
+                responsive:true,
+                maintainAspectRatio:false,
+                plugins:{ legend:{ display:false } }
+            }
+        });
+        console.log('[HOS Dashboard] Chart created:', chart);
         return chart;
-    }else{
+    } else {
         const counts={};
-        rows.forEach(r=>{ const val=r[vtIdx]; if(val!==null && val!==undefined && String(val).trim().toLowerCase()!=='null'){ counts[val]=(counts[val]||0)+1; }});
-        const violationCounts = counts;
-        console.log('[HOS Dashboard] Creating bar chart with data:', violationCounts);
-        const chart = new Chart(ctx,{ type:'bar', data:{ labels:Object.keys(violationCounts), datasets:[{ label:'Violations', data:Object.values(violationCounts), backgroundColor:['#FF6B35','#F7931E','#00D9FF','#39FF14','#FF0000'] }] }, options:{ scales:{ y:{ beginAtZero:true } } } });
+        rows.forEach(r=>{ 
+            const val=r[vtIdx]; 
+            if(val!==null && val!==undefined && String(val).trim().toLowerCase()!=='null'){ 
+                counts[val]=(counts[val]||0)+1; 
+            }
+        });
+        console.log('[HOS Dashboard] Creating bar chart with data:', counts);
+        const chart = new Chart(ctx,{ 
+            type: chartType || 'bar', 
+            data:{ 
+                labels:Object.keys(counts), 
+                datasets:[{ 
+                    label:'Violations', 
+                    data:Object.values(counts), 
+                    backgroundColor:['#FF6B35','#F7931E','#00D9FF','#39FF14','#FF0000'] 
+                }] 
+            }, 
+            options:{ 
+                responsive:true,
+                maintainAspectRatio:false,
+                plugins:{ legend:{ display:false } },
+                scales:{ y:{ beginAtZero:true } }
+            }
+        });
         console.log('[HOS Dashboard] Chart created:', chart);
         return chart;
     }

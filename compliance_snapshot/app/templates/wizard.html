@@ -281,7 +281,18 @@
         justify-content: center;
         position: relative;
         min-height: 250px;
-        min-width: 300px;
+        padding: 10px;
+    }
+
+    .chart-body > div {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .chart-body canvas {
+        max-width: 100%;
+        max-height: 100%;
     }
 
     .chart-placeholder {
@@ -473,15 +484,29 @@ async function openDashboard() {
     drawSafetyChartForDashboard: typeof window.drawSafetyChartForDashboard,
     drawHOSChartForDashboard: typeof window.drawHOSChartForDashboard
   });
-  // Clean up any existing dashboard charts
+  // Destroy ALL existing charts properly
   if (window.dashboardCharts) {
-    Object.values(window.dashboardCharts).forEach(chart => {
+    Object.entries(window.dashboardCharts).forEach(([key, chart]) => {
       if (chart && typeof chart.destroy === 'function') {
-        chart.destroy();
+        try {
+          chart.destroy();
+          console.log(`Destroyed chart: ${key}`);
+        } catch (e) {
+          console.error(`Error destroying chart ${key}:`, e);
+        }
+      }
+    });
+    window.dashboardCharts = {};
+  }
+
+  // Also destroy any lingering Chart.js instances
+  if (window.Chart && window.Chart.instances) {
+    Object.values(window.Chart.instances).forEach(inst => {
+      if (inst && typeof inst.destroy === 'function') {
+        inst.destroy();
       }
     });
   }
-  window.dashboardCharts = {};
 
   Chart.defaults.responsive = true;
   Chart.defaults.maintainAspectRatio = false;
@@ -560,84 +585,59 @@ async function openDashboard() {
       console.log(`Creating card for: ${type}`);
     }
 
+    // After creating all cards, create charts
     for (const type of reportTypes) {
-      const container = document.querySelector(`#chart-${type}`);
-            if (!container) continue;
+        const container = document.querySelector(`#chart-${type}`);
+        if (!container) continue;
 
-            // Destroy existing chart if it exists
-            if (window.dashboardCharts && window.dashboardCharts[type]) {
-                window.dashboardCharts[type].destroy();
-                delete window.dashboardCharts[type];
-            }
+        try {
+            console.log(`Creating chart for ${type}...`);
 
-            // Clear the container first
+            // Clear any existing content
             container.innerHTML = '';
 
-            // Create canvas with explicit size
-            const canvas = document.createElement('canvas');
-            canvas.width = 400;  // Set explicit width
-            canvas.height = 250; // Set explicit height
-            canvas.style.width = '100%';
-            canvas.style.height = '250px';
-            container.appendChild(canvas);
+            // Create a wrapper div for better sizing control
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.width = '100%';
+            wrapper.style.height = '250px';
+            container.appendChild(wrapper);
 
-            // Get context
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            wrapper.appendChild(canvas);
+
+            // Fetch data
+            const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
+            if (!res.ok) throw new Error(`Failed to fetch data for ${type}`);
+            const {columns, rows} = await res.json();
+            console.log(`Fetched ${rows.length} rows for ${type}`);
+
+            // Get context AFTER canvas is in DOM
             const ctx = canvas.getContext('2d');
 
-            // Fetch data for this specific table type
-            try {
-                console.log(`Fetching data for ${type}...`);
-                const res = await fetch(`/api/${ticket}/query?table=${encodeURIComponent(type)}`);
-                if (!res.ok) throw new Error(`Failed to fetch data for ${type}`);
-                const {columns, rows} = await res.json();
-                console.log(`Fetched ${rows.length} rows for ${type}`);
+            // Get the draw function
+            const draw = chartMap[type];
+            if (draw && typeof draw === 'function') {
+                // Call the draw function
+                const chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
 
-                // Draw chart immediately (no setTimeout)
-                const draw = chartMap[type];
-                if (draw) {
-                    try {
-                        console.log(`Attempting to draw ${type} chart...`);
-
-                        // Call the draw function and capture result
-                        let chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
-
-                        // If no chart returned, create a fallback chart
-                        if (!chartInstance) {
-                            console.log(`No chart returned for ${type}, creating fallback...`);
-                            chartInstance = new Chart(ctx, {
-                                type: 'bar',
-                                data: {
-                                    labels: ['No Data'],
-                                    datasets: [{
-                                        label: type,
-                                        data: [1],
-                                        backgroundColor: '#ff6384'
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false
-                                }
-                            });
-                        }
-
-                        console.log(`${type} chart created:`, !!chartInstance);
-
-                        // Store the chart
-                        if (!window.dashboardCharts) window.dashboardCharts = {};
-                        window.dashboardCharts[type] = chartInstance;
-
-                    } catch (error) {
-                        console.error(`Error creating ${type} chart:`, error);
-                    }
+                if (chartInstance) {
+                    console.log(`${type} chart created successfully`);
+                    if (!window.dashboardCharts) window.dashboardCharts = {};
+                    window.dashboardCharts[type] = chartInstance;
                 } else {
-                    console.warn(`No chart function found for ${type}`);
+                    console.error(`${type} chart function returned null/undefined`);
+                    container.innerHTML = '<div class="chart-placeholder">No data available</div>';
                 }
-            } catch (error) {
-                console.error(`Error fetching data for ${type}:`, error);
-                // Create error placeholder
-                container.innerHTML = '<div class="chart-placeholder">Error loading data</div>';
+            } else {
+                console.warn(`No chart function found for ${type}`);
+                container.innerHTML = '<div class="chart-placeholder">Chart type not supported</div>';
             }
+        } catch (error) {
+            console.error(`Error creating ${type} chart:`, error);
+            container.innerHTML = `<div class="chart-placeholder">Error: ${error.message}</div>`;
+        }
     }
 
   } catch (error) {
