@@ -1,0 +1,77 @@
+Creating card for: hos
+d39c18ee485a41dbbc2347161c1d667f:543 Creating card for: safety_inbox
+d39c18ee485a41dbbc2347161c1d667f:543 Creating card for: personnel_conveyance
+d39c18ee485a41dbbc2347161c1d667f:543 Creating card for: unassigned_hos
+d39c18ee485a41dbbc2347161c1d667f:543 Creating card for: mistdvi
+d39c18ee485a41dbbc2347161c1d667f:543 Creating card for: driver_behaviors
+d39c18ee485a41dbbc2347161c1d667f:543 Creating card for: driver_safety
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for hos...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 21557 rows for hos
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw hos chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for hos, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating hos chart: Error: Canvas is already in use. Chart with ID '1' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for safety_inbox...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 314 rows for safety_inbox
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw safety_inbox chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for safety_inbox, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating safety_inbox chart: Error: Canvas is already in use. Chart with ID '2' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for personnel_conveyance...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 1152 rows for personnel_conveyance
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw personnel_conveyance chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for personnel_conveyance, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating personnel_conveyance chart: Error: Canvas is already in use. Chart with ID '3' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for unassigned_hos...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 478 rows for unassigned_hos
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw unassigned_hos chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for unassigned_hos, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating unassigned_hos chart: Error: Canvas is already in use. Chart with ID '4' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for mistdvi...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 95 rows for mistdvi
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw mistdvi chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for mistdvi, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating mistdvi chart: Error: Canvas is already in use. Chart with ID '5' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for driver_behaviors...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 61 rows for driver_behaviors
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw driver_behaviors chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for driver_behaviors, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating driver_behaviors chart: Error: Canvas is already in use. Chart with ID '6' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
+d39c18ee485a41dbbc2347161c1d667f:566 Fetching data for driver_safety...
+d39c18ee485a41dbbc2347161c1d667f:570 Fetched 40 rows for driver_safety
+d39c18ee485a41dbbc2347161c1d667f:576 Attempting to draw driver_safety chart...
+d39c18ee485a41dbbc2347161c1d667f:583 No chart returned for driver_safety, creating fallback...
+d39c18ee485a41dbbc2347161c1d667f:608 Error creating driver_safety chart: Error: Canvas is already in use. Chart with ID '7' must be destroyed before the canvas with ID '' can be reused.
+    at new Tn (chart.js:13:90615)
+    at openDashboard (d39c18ee485a41dbbc2347161c1d667f:584:45)
+openDashboard @ d39c18ee485a41dbbc2347161c1d667f:608
+await in openDashboard
+(anonymous) @ d39c18ee485a41dbbc2347161c1d667f:440Understand this error
