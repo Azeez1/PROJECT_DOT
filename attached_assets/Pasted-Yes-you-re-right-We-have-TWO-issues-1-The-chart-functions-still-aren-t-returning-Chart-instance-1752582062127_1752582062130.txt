@@ -1,0 +1,87 @@
+Yes, you're right! We have TWO issues:
+1. The chart functions still aren't returning Chart instances (all showing `undefined`)
+2. The canvas elements have 0 width and height
+
+Let's fix both issues with a more direct approach:
+
+## Prompt 7: Direct Fix for Both Issues
+
+```
+We need to fix both the return statements AND the canvas sizing. Let's take a different approach:
+
+1. First, let's verify the chart functions are actually being called. In static/js/additional-charts.js, add a console.log at the START of drawHOSChartForDashboard:
+
+function drawHOSChartForDashboard(ctx, rows, cols, chartType) {
+    console.log('[HOS Dashboard] Function called with:', rows.length, 'rows');
+    // rest of function...
+}
+
+2. Now, let's create a wrapper function that ensures charts are returned and canvases are sized. In wizard.html, replace the chart drawing section in openDashboard with this:
+
+// Replace this section:
+const container = document.querySelector(`#chart-${type}`);
+if (!container) continue;
+// ... canvas creation code ...
+
+// WITH THIS:
+const container = document.querySelector(`#chart-${type}`);
+if (!container) continue;
+
+// Clear the container first
+container.innerHTML = '';
+
+// Create canvas with explicit size
+const canvas = document.createElement('canvas');
+canvas.width = 400;  // Set explicit width
+canvas.height = 250; // Set explicit height
+canvas.style.width = '100%';
+canvas.style.height = '250px';
+container.appendChild(canvas);
+
+// Get context
+const ctx = canvas.getContext('2d');
+
+// Draw chart immediately (no setTimeout)
+const draw = chartMap[type];
+if (draw) {
+    try {
+        console.log(`Attempting to draw ${type} chart...`);
+        
+        // Call the draw function and capture result
+        let chartInstance = draw(ctx, rows, columns, chartTypeDefaults[type] || 'bar');
+        
+        // If no chart returned, create a fallback chart
+        if (!chartInstance) {
+            console.log(`No chart returned for ${type}, creating fallback...`);
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['No Data'],
+                    datasets: [{
+                        label: type,
+                        data: [1],
+                        backgroundColor: '#ff6384'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+        
+        console.log(`${type} chart created:`, !!chartInstance);
+        
+        // Store the chart
+        if (!window.dashboardCharts) window.dashboardCharts = {};
+        window.dashboardCharts[type] = chartInstance;
+        
+    } catch (error) {
+        console.error(`Error creating ${type} chart:`, error);
+    }
+}
+
+3. Test this approach. If you see the fallback charts (showing "No Data"), it confirms the draw functions aren't returning Chart instances, and we'll need to manually fix each function.
+
+Share the console output after these changes.
+```
