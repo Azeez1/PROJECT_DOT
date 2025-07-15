@@ -7,10 +7,11 @@ window.activeFilters = window.activeFilters || {};
 if (buildBtn) {
   buildBtn.addEventListener('click', async (e) => {
     e.preventDefault();
-    const payload = {
-      filters: window.activeFilters,
-      trend_end: document.getElementById('trend-end')?.value || null,
-    };
+  const payload = {
+    filters: window.activeFilters,
+    trend_end: document.getElementById('trend-end')?.value || null,
+    include_word: document.getElementById('include-word')?.checked || false,
+  };
     const msg = document.getElementById('message');
     msg.textContent = '';
     const res = await fetch(`/finalize/${wizId}`, {
@@ -25,7 +26,9 @@ if (buildBtn) {
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'DOT_Compliance_Snapshot.pdf';
+    const ct = res.headers.get('content-type') || '';
+    const ext = ct.includes('zip') ? '.zip' : '.pdf';
+    a.download = 'DOT_Compliance_Snapshot' + ext;
     a.click();
   });
 }

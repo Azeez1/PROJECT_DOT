@@ -8,6 +8,7 @@ import sqlite3
 import json
 from pathlib import Path
 from ..services.pdf_builder import build_pdf
+from ..services.word_builder import build_word
 from ..core.utils import file_response
 
 router = APIRouter()
@@ -94,7 +95,25 @@ async def finalize(wiz_id: str, request: Request):
     filters = payload.get("filters") or {}
     trend_end = payload.get("trend_end")
 
+    include_word = bool(payload.get("include_word"))
+
     pdf_path = build_pdf(wiz_id, filters=filters, trend_end=trend_end)
+
+    if include_word:
+        word_path = build_word(wiz_id, filters=filters, trend_end=trend_end)
+        zip_path = Path(f"/tmp/{wiz_id}/ComplianceSnapshot.zip")
+        from zipfile import ZipFile
+
+        with ZipFile(zip_path, "w") as zf:
+            zf.write(pdf_path, arcname=f"DOT_Compliance_{wiz_id[:8]}.pdf")
+            zf.write(word_path, arcname=f"DOT_Compliance_{wiz_id[:8]}.docx")
+
+        return file_response(
+            zip_path,
+            filename=f"DOT_Compliance_{wiz_id[:8]}.zip",
+            media_type="application/zip",
+        )
+
     return file_response(
         pdf_path,
         filename=f"DOT_Compliance_{wiz_id[:8]}.pdf",
