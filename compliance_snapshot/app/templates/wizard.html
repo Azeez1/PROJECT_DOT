@@ -468,6 +468,11 @@ async function loadErrors(){
 async function openDashboard() {
   console.log('=== DASHBOARD OPENED ===');
   console.log('Chart.js loaded?', typeof Chart !== 'undefined');
+  console.log('Chart functions available:', {
+    drawPCChartForDashboard: typeof window.drawPCChartForDashboard,
+    drawSafetyChartForDashboard: typeof window.drawSafetyChartForDashboard,
+    drawHOSChartForDashboard: typeof window.drawHOSChartForDashboard
+  });
   Chart.defaults.responsive = true;
   Chart.defaults.maintainAspectRatio = false;
   Chart.defaults.plugins.legend.display = false;
@@ -498,6 +503,22 @@ async function openDashboard() {
       driver_safety_report: drawDriverSafetyChartForDashboard,
       hos: drawHOSChartForDashboard
     };
+
+    // Test if chart functions work
+    const testCanvas = document.createElement('canvas');
+    const testCtx = testCanvas.getContext('2d');
+    const testData = [[1, 2, 3]];
+    const testCols = ['col1', 'col2', 'col3'];
+
+    if (window.drawHOSChartForDashboard) {
+        console.log('Testing HOS chart function...');
+        try {
+            const testChart = window.drawHOSChartForDashboard(testCtx, testData, testCols, 'bar');
+            console.log('Test chart result:', testChart);
+        } catch (e) {
+            console.error('Test chart error:', e);
+        }
+    }
 
     const reportTypes = [
       'hos', 'safety_inbox', 'personnel_conveyance',
